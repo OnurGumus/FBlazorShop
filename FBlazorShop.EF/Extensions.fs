@@ -1,0 +1,19 @@
+﻿namespace FBlazorShop.EF
+
+open System.Runtime.CompilerServices
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.EntityFrameworkCore
+open System
+open FBlazorShop.App
+
+[<Extension>]
+type EFExtensions() =
+    [<Extension>]
+    static member inline AddEF(services: IServiceCollection, connString : string) = 
+        fun (options : DbContextOptionsBuilder) -> 
+            connString 
+            |> options.UseSqlite  
+            |> ignore
+        |>  services.AddDbContext<PizzaStoreContext> 
+        |> ignore
+        services.AddScoped(typeof<IReadOnlyRepo<_>>, typeof<ReadOnlyRepo<_>>)

@@ -1,0 +1,22 @@
+source https://www.nuget.org/api/v2
+source https://ci.appveyor.com/nuget/bolero
+storage:none
+framework:auto-detect
+nuget FSharp.Core
+nuget System.Collections.Immutable
+nuget Microsoft.EntityFrameworkCore
+nuget System.Threading.Tasks
+nuget TaskBuilder.fs
+nuget Microsoft.EntityFrameworkCore.Sqlite
+nuget Bolero >=  0.9.9-preview9
+nuget Bolero.Server >=  0.9.9-preview9
+nuget Bolero.HotReload.Server prerelease
+nuget Bolero.HotReload prerelease
+nuget Microsoft.AspNetCore.Blazor  prerelease
+nuget Microsoft.AspNetCore.Blazor.Server prerelease
+nuget Microsoft.Extensions.Primitives  >= 3.1.0-preview1.19506.1
+nuget Microsoft.Extensions.Logging >= 3.1.0-preview1.19506.1 (preview1)*
+nuget System.ComponentModel.Annotations >= 4.7.0-preview1.19504.10 (preview1)*
+nuget Mono.WebAssembly.Interop >= 3.1.0-preview1.19506.1
+nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation prerelease
+nuget Microsoft.AspNetCore.Antiforgery prerelease

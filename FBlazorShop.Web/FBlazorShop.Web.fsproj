@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <BlazorLinkOnBuild>false</BlazorLinkOnBuild>
+    <RazorLangVersion>3.0</RazorLangVersion>
+    <PreserveCompilationReferences>true</PreserveCompilationReferences>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Startup.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="paket.references" />
+    <None Include="pizza.db" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FBlazorShop.App\FBlazorShop.App.fsproj" />
+    <ProjectReference Include="..\FBlazorShop.EF\FBlazorShop.EF.fsproj" />
+    <ProjectReference Include="..\FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj" />
+  </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>
