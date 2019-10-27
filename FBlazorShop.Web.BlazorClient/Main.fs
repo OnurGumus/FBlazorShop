@@ -47,6 +47,12 @@ let view ( model : Model) dispatch =
                     ecomp<ViewItem,_,_> i dispatch)
                 .Elt()
     MainLayout()
+        .GetPizzaLink(navLink NavLinkMatch.All 
+            [attr.href ""; attr.``class`` "nav-tab"] 
+            [
+                img [attr.src ("img/pizza-slice.svg" |> prependContent)] 
+                div [] [text "Get Pizza"]
+            ])
         .Body(content)
         .Elt()
 
