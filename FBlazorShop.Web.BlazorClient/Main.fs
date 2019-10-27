@@ -60,6 +60,9 @@ type MyApp() =
         let update = update remote
         let init = initModel remote
         Program.mkProgram (fun _ -> init) update view
+#if DEBUG
+
         |> Program.withConsoleTrace
         |> Program.withErrorHandler (printf "%A")
         |> Program.withHotReload
+#endif
