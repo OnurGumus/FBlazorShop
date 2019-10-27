@@ -5,6 +5,7 @@ open Microsoft.Extensions.DependencyInjection
 open Microsoft.EntityFrameworkCore
 open System
 open FBlazorShop.App
+open FBlazorShop.App.Model
 
 [<Extension>]
 type EFExtensions() =
@@ -16,4 +17,4 @@ type EFExtensions() =
             |> ignore
         |>  services.AddDbContext<PizzaStoreContext> 
         |> ignore
-        services.AddScoped(typeof<IReadOnlyRepo<_>>, typeof<ReadOnlyRepo<_>>)
+        services.AddScoped(typedefof<IReadOnlyRepo<_>>, typedefof<ReadOnlyRepo<_>>)
