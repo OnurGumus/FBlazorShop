@@ -10,9 +10,16 @@ let specials = [
            BasePrice = 9.99m
            ImageUrl = "img/pizzas/cheese.jpg"
        }
+       {
+                 Id = 1
+                 Name = "Basic Margarita Pizza"
+                 Description = "It's cheesy and delicious. Why wouldn't you want one?"
+                 BasePrice = 9.99m
+                 ImageUrl = "img/pizzas/cheese.jpg"
+       }
    ]
 let initialize (db : PizzaStoreContext) =
-   
+
     db.Specials.AddRange specials
     db.SaveChanges() |> ignore
 

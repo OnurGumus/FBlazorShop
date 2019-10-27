@@ -1,5 +1,5 @@
 source https://www.nuget.org/api/v2
-source https://ci.appveyor.com/nuget/bolero
+
 storage:none
 framework:auto-detect
 nuget FSharp.Core
@@ -8,8 +8,8 @@ nuget Microsoft.EntityFrameworkCore
 nuget System.Threading.Tasks
 nuget TaskBuilder.fs
 nuget Microsoft.EntityFrameworkCore.Sqlite
-nuget Bolero >=  0.9.9-preview9
-nuget Bolero.Server >=  0.9.9-preview9
+nuget Bolero prerelease
+nuget Bolero.Server prerelease
 nuget Bolero.HotReload.Server prerelease
 nuget Bolero.HotReload prerelease
 nuget Microsoft.AspNetCore.Blazor  = 3.0.0-preview9.19465.2

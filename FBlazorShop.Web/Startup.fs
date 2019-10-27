@@ -19,7 +19,7 @@ type Startup() =
      //   services.AddRazorPages() |> ignore
         services
         #if DEBUG
-            .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient/wwwroot")
+            .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient")
         #endif
         |> ignore
         services.AddRemoting<Services.PizzaService>() |> ignore
