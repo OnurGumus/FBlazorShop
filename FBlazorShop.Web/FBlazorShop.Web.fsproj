@@ -14,7 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />
-    <None Include="pizza.db" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FBlazorShop.App\FBlazorShop.App.fsproj" />

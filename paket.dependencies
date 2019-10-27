@@ -4,10 +4,10 @@ storage:none
 framework:auto-detect
 nuget FSharp.Core
 nuget System.Collections.Immutable
-nuget Microsoft.EntityFrameworkCore
+nuget Microsoft.EntityFrameworkCore prerelease
 nuget System.Threading.Tasks
 nuget TaskBuilder.fs
-nuget Microsoft.EntityFrameworkCore.Sqlite
+nuget Microsoft.EntityFrameworkCore.Sqlite prerelease
 nuget Bolero prerelease
 nuget Bolero.Server prerelease
 nuget Bolero.HotReload.Server prerelease
@@ -18,4 +18,4 @@ nuget Microsoft.AspNetCore.Blazor.Server = 3.0.0-preview9.19465.2
 #nuget Microsoft.Extensions.Logging >= 3.1.0-preview1.19506.1 (preview1)*
 #nuget System.ComponentModel.Annotations >= 4.7.0-preview1.19504.10 (preview1)*
 #nuget Mono.WebAssembly.Interop >= 3.1.0-preview1.19506.1
-nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation 
+nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation  prerelease
