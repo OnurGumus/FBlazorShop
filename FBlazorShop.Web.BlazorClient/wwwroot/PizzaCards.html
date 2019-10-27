@@ -1,0 +1,15 @@
+﻿<div class="main">
+    <ul class="pizza-cards">
+        ${Items}
+    </ul>
+</div>
+
+<template id="Item">
+    <li style="background-image: url('${imageurl}')">
+        <div class="pizza-info">
+            <span class="title">${name}</span>
+            ${description}
+            <span class="price">${price}</span>
+        </div>
+    </li>
+</template>

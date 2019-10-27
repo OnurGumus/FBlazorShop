@@ -9,7 +9,8 @@ open Microsoft.Extensions.Hosting
 open Microsoft.EntityFrameworkCore
 open FBlazorShop.EF
 open Bolero.Templating.Server
-
+open Bolero.Remoting.Server
+open Bolero.Remoting
 type Startup() =
 
     // This method gets called by the runtime. Use this method to add services to the container.
@@ -21,11 +22,13 @@ type Startup() =
             .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient/wwwroot")
         #endif
         |> ignore
+        services.AddRemoting<Services.PizzaService>() |> ignore
 
         services.AddMvc().AddRazorRuntimeCompilation() |> ignore
         services
             .AddEF("Data Source=pizza.db") 
             .AddServerSideBlazor()
+            
             |> ignore
 
         
@@ -37,6 +40,7 @@ type Startup() =
 
        
         app
+            .UseRemoting()
             .UseRouting()
             .UseStaticFiles() 
             |> ignore

@@ -121,6 +121,7 @@ let viewForm (js: IJSRuntime) model dispatch =
     div [] [
         input [attr.value model.input; on.change (fun e -> dispatch (SetInput (unbox e.Value)))]
         input [
+            
             attr.bindRef btnRef
             attr.``type`` "submit"
             on.click (fun _ ->
