@@ -8,7 +8,7 @@ open Elmish
 open Services
 open PizzaConfig
 
-type Model = { specials: PizzaSpecial list ; PizzaConfig : PizzaConfig.Model}
+type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model}
 type Message = 
     | DataReceived of PizzaSpecial list 
     | PizzaConfigMsg of PizzaConfigMsg
@@ -57,7 +57,7 @@ let view ( model : Model) dispatch =
                     ecomp<ViewItem,_,_> i dispatch)
                 .Elt()
     
-    let pizzaconfig = PizzaConfig.view model.PizzaConfig dispatch
+    let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href ""; attr.``class`` "nav-tab"] 

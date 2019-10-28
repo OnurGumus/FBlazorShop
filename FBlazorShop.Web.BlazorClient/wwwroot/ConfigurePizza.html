@@ -4,7 +4,15 @@
             <h2>${SpecialName}</h2>
             ${SpecialDescription}
         </div>
-        <form class="dialog-body"></form>
+        <form class="dialog-body">
+            <div>
+                <label>Size:</label>
+                <input type="range" min="${MinimumSize}" max="${MaximumSize}" step="1" bind-oninput="${SizeN}" />
+                <span class="size-label">
+                    ${Size}" (£${FormattedTotalPrice})
+                </span>
+            </div>
+        </form>
         <div class="dialog-buttons">
             <button class="btn btn-secondary mr-auto">Cancel</button>
             <span class="mr-center">

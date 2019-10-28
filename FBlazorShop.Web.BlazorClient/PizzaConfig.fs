@@ -8,6 +8,7 @@ type Model = Pizza option
 
 type PizzaConfigMsg= 
     | PizzaConfigRequested of PizzaSpecial
+    | SizeUpdated of int
 
 let init () = None
 
@@ -24,6 +25,8 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
              Toppings = [] 
         } |> Some,
         Cmd.none
+    | SizeUpdated i ->
+        { state.Value with Size = i } |> Some, Cmd.none
 
 open Bolero
 
@@ -36,5 +39,9 @@ let view (model : Model) dispatcher =
             .SpecialName(pizza.Special.Name)
             .FormattedTotalPrice(pizza.FormattedTotalPrice)
             .SpecialDescription(pizza.Special.Description)
+            .MaximumSize(Pizza.MaximumSize)
+            .MinimumSize(Pizza.MinimumSize)
+            .Size(pizza.Size.ToString())
+            .SizeN(pizza.Size.ToString(), fun i ->  SizeUpdated (System.Int32.Parse (i)) |> dispatcher)
             .Elt()
     | _ -> empty
