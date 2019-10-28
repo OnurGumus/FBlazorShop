@@ -6,18 +6,23 @@ open FBlazorShop.App.Model
 open Bolero.Remoting
 open Elmish
 open Services
+open PizzaConfig
 
-type Model = { specials: PizzaSpecial list }
-type Message = DataReceived of PizzaSpecial list
+type Model = { specials: PizzaSpecial list ; PizzaConfig : PizzaConfig.Model}
+type Message = 
+    | DataReceived of PizzaSpecial list 
+    | PizzaConfigMsg of PizzaConfigMsg
 
 let initModel (remote : PizzaService) =
-    { specials = [] },
+    { specials = []; PizzaConfig = PizzaConfig.init() },
     Cmd.ofAsync remote.getSpecials () DataReceived raise
 
 let update remote message model =
     match message with
     | DataReceived d -> { model with specials = d }, Cmd.none
-
+    | PizzaConfigMsg p -> 
+        let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig p
+        {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
 open Bolero.Html
 open Bolero
 open BoleroHelpers
@@ -35,6 +40,11 @@ type ViewItem() =
             .imageurl(special.ImageUrl |> prependContent)
             .name(special.Name)
             .price(special.FormattedBasePrice)
+            .specialSelected(fun _ -> 
+                special
+                |> PizzaConfigRequested
+                |> PizzaConfigMsg
+                |> dispatch)
             .Elt()
 
 let view ( model : Model) dispatch =
@@ -46,6 +56,8 @@ let view ( model : Model) dispatch =
                 .Items(forEach model.specials <| fun i ->
                     ecomp<ViewItem,_,_> i dispatch)
                 .Elt()
+    
+    let pizzaconfig = PizzaConfig.view model.PizzaConfig dispatch
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href ""; attr.``class`` "nav-tab"] 
@@ -54,6 +66,7 @@ let view ( model : Model) dispatch =
                 div [] [text "Get Pizza"]
             ])
         .Body(content)
+        .PizzaConfig(pizzaconfig)
         .Elt()
 
 open Bolero.Templating.Client

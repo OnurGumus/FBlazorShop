@@ -7,6 +7,7 @@
   <ItemGroup>
     <Compile Include="BoleroHelpers.fs" />
     <Compile Include="Services.fs" />
+    <Compile Include="PizzaConfig.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>

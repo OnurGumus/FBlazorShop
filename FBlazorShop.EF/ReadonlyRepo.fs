@@ -2,17 +2,24 @@
 open FBlazorShop.App
 open System.Linq
 open System.Threading.Tasks
-open System.Collections.Immutable
 open Microsoft.EntityFrameworkCore
 open FSharp.Control.Tasks.V2
+open System.Collections.Generic
+open FBlazorShop.App.Model
 
 type ReadOnlyRepo<'T> ( dataContext : PizzaStoreContext) = 
     interface IReadOnlyRepo<'T> with
-        member this.Queryable: IQueryable<'T> = 
-            dataContext.Specials.AsQueryable() :?> IQueryable<'T>
-        member this.ToListAsync(query: IQueryable<'T>): Task<ImmutableList<'T>> = 
+        member _.Queryable: IQueryable<'T> = 
+            if typeof<'T> = typeof<PizzaSpecial> then
+                dataContext.Specials.AsQueryable() :?> IQueryable<'T>
+            elif typeof<'T> = typeof<Topping> then 
+                dataContext.Toppings.AsQueryable() :?> IQueryable<'T>
+            else
+                invalidOp "unknown type" 
+
+        member _.ToListAsync(query: IQueryable<'T>) : Task<IReadOnlyList<'T>> = 
             task{
                 let! items = query.ToListAsync()
-                return ImmutableList.CreateRange items
+                return upcast items
             }
           
