@@ -11,16 +11,19 @@ type public PizzaService(ctx: IRemoteContext) =
         member private _.GetService<'T>() : 'T = 
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
 
+        member private this.GetItems<'T>() =
+            fun () -> 
+                let repo = this.GetService<IReadOnlyRepo<'T>>()
+                async { 
+                      let! b =  
+                          repo.Queryable 
+                          |> repo.ToListAsync 
+                          |> Async.AwaitTask 
+                      return b |> List.ofSeq
+                }
         override this.Handler =
            {
-               getSpecials = fun () -> 
-                let repo = this.GetService<IReadOnlyRepo<PizzaSpecial>>()
-                async { 
-                    let! b =  
-                        repo.Queryable 
-                        |> repo.ToListAsync 
-                        |> Async.AwaitTask 
-                    return b |> List.ofSeq
-                }
+               getSpecials = this.GetItems<PizzaSpecial>()
+               getToppings = this.GetItems<Topping>()
            }
    

@@ -5,6 +5,8 @@
             ${SpecialDescription}
         </div>
         <form class="dialog-body">
+            ${ToppingCombo}
+            ${ToppingItems}
             <div>
                 <label>Size:</label>
                 <input type="range" min="${MinimumSize}" max="${MaximumSize}" step="1" bind-oninput="${SizeN}" />
@@ -22,3 +24,10 @@
         </div>
     </div>
 </div>
+<template id="ToppingItem">
+    <div class="topping">
+        ${Name}
+        <span class="topping-price">${FormattedPrice}</span>
+        <button type="button" class="delete-topping" onclick="">x</button>
+    </div>
+</template>

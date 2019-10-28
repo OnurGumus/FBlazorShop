@@ -10,16 +10,20 @@ open PizzaConfig
 
 type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model}
 type Message = 
-    | DataReceived of PizzaSpecial list 
+    | SpecialsReceived of PizzaSpecial list 
     | PizzaConfigMsg of PizzaConfigMsg
 
 let initModel (remote : PizzaService) =
-    { specials = []; PizzaConfig = PizzaConfig.init() },
-    Cmd.ofAsync remote.getSpecials () DataReceived raise
+    let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
+    let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
+    let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
+    let cmd = Cmd.batch [ cmd ; pizzaConfigCmd]
+    { specials = []; PizzaConfig = pizzaConfigModel }, cmd
+    
 
 let update remote message model =
     match message with
-    | DataReceived d -> { model with specials = d }, Cmd.none
+    | SpecialsReceived d -> { model with specials = d }, Cmd.none
     | PizzaConfigMsg p -> 
         let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig p
         {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd

@@ -138,5 +138,5 @@ let toppings =
 let initialize (db: PizzaStoreContext) =
 
     db.Specials.AddRange specials
-    
+    db.Toppings.AddRange toppings
     db.SaveChanges() |> ignore
