@@ -14,6 +14,7 @@ type PizzaConfigMsg=
     | SizeUpdated of int
     | ToppingsReceived of Topping list
     | ToppingSelected of int
+    | ToppingRemoved of PizzaTopping
 
 let init (remote : PizzaService ) () = 
     let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
@@ -37,6 +38,11 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
     | SizeUpdated i ->
         { state with Pizza = { state.Pizza.Value with Size = i } |> Some }, Cmd.none
     | ToppingsReceived toppings -> { state with Toppings = toppings } , Cmd.none
+    | ToppingRemoved removedTopping -> 
+         let pizza = state.Pizza.Value
+         let removed = pizza.Toppings |> List.ofSeq |> List.filter (fun t -> t.ToppingId <> removedTopping.ToppingId)
+         let pizza = { pizza with Toppings = removed} |> Some
+         { state with Pizza = pizza }, Cmd.none
     | ToppingSelected t -> 
         let pizza = state.Pizza.Value
         let topping = state.Toppings.Item t
@@ -65,21 +71,27 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
                         forEach (toppings |> List.mapi (fun i t -> (i,t))) ( fun (i,t) -> option [ attr.value i] [textf "%s - $%s" t.Name t.FormattedBasePrice] )
                     ]
                 
-        //        <select class="custom-select" disabled>
-        //        <option>(loading...)</option>
-        //</select>
     ]
+
 type PizzaConfig = Template<"wwwroot\ConfigurePizza.html">
 open System.Collections.Generic
 
-let viewToppingItems (toppings : IReadOnlyList<PizzaTopping> ) =
-    forEach toppings (fun t -> PizzaConfig.ToppingItem().Name(t.Topping.Name).FormattedPrice(t.Topping.FormattedBasePrice).Elt())
+let viewToppingItems (toppings : IReadOnlyList<PizzaTopping> ) dispatcher =
+    forEach toppings (fun t -> 
+        PizzaConfig.ToppingItem()
+            .Name(t.Topping.Name)
+            .FormattedPrice(t.Topping.FormattedBasePrice)
+            .RemoveTopping(fun _ -> 
+                t
+                |> ToppingRemoved
+                |> dispatcher)
+            .Elt())
 
 let view (model : Model) dispatcher = 
     match model.Pizza with
     | Some pizza ->
         let toppings = viewToppings pizza (model.Toppings) dispatcher
-        let toppingItems = viewToppingItems pizza.Toppings 
+        let toppingItems = viewToppingItems pizza.Toppings dispatcher
         PizzaConfig()
             .ToppingItems(toppingItems)
             .ToppingCombo(toppings)
