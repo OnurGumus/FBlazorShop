@@ -47,3 +47,34 @@ with
     member this.BasePrice = ((decimal)this.Size / (decimal)Pizza.DefaultSize) * this.Special.BasePrice
     member this.TotalPrice = this.BasePrice + this.Toppings.Sum(fun t -> t.Topping.Price)
     member this.FormattedTotalPrice =  this.TotalPrice.ToString("0.00");
+
+[<CLIMutable>]
+type Address ={
+    Id :int
+    Name:string
+    Line1 : string 
+    Line2 : string
+    City : string
+    Region : string
+    PostalCode : string
+}
+
+[<CLIMutable>]
+type LatLong = {
+    Latitude : double
+    Longitude : double
+}
+open System
+
+[<CLIMutable>]
+type Order = {
+    OrderId : int
+    UserId : string
+    CreatedTime : DateTime
+    DeliveryAddress : Address
+    DeliveryLocation : LatLong
+    Pizzas : IReadOnlyList<Pizza>
+}
+with
+    member this.TotalPrice = this.Pizzas.Sum(fun p -> p.TotalPrice)
+    member this.FormattedTotalPrice =  this.TotalPrice.ToString("0.00")

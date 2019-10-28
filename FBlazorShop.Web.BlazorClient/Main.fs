@@ -8,7 +8,7 @@ open Elmish
 open Services
 open PizzaConfig
 
-type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model}
+type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model; Order : Order option}
 type Message = 
     | SpecialsReceived of PizzaSpecial list 
     | PizzaConfigMsg of PizzaConfigMsg
@@ -18,15 +18,31 @@ let initModel (remote : PizzaService) =
     let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
     let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
     let cmd = Cmd.batch [ cmd ; pizzaConfigCmd]
-    { specials = []; PizzaConfig = pizzaConfigModel }, cmd
+    { specials = []; PizzaConfig = pizzaConfigModel; Order = None }, cmd
     
 
 let update remote message model =
     match message with
     | SpecialsReceived d -> { model with specials = d }, Cmd.none
-    | PizzaConfigMsg p -> 
-        let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig p
-        {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
+    | PizzaConfigMsg msg -> 
+        let order = 
+            match msg with
+            | ConfirmConfig p ->
+                match model.Order with 
+                | Some order -> { order with Pizzas = p :: [yield! order.Pizzas] } |> Some
+                | _ ->
+                    {
+                        OrderId = 0
+                        UserId = ""
+                        CreatedTime = System.DateTime.Now
+                        DeliveryAddress = Unchecked.defaultof<_>
+                        DeliveryLocation = Unchecked.defaultof<_>
+                        Pizzas = [p]
+                    } |> Some
+            | _ -> model.Order
+        let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
+        {model with PizzaConfig = pizzaConfigModel; Order = order}, Cmd.map PizzaConfigMsg cmd
+    
 open Bolero.Html
 open Bolero
 open BoleroHelpers

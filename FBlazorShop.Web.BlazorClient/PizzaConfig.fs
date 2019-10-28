@@ -15,6 +15,8 @@ type PizzaConfigMsg=
     | ToppingsReceived of Topping list
     | ToppingSelected of int
     | ToppingRemoved of PizzaTopping
+    | Cancel
+    | ConfirmConfig of Pizza
 
 let init (remote : PizzaService ) () = 
     let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
@@ -50,6 +52,10 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
         let toppings = pizzaTopping :: (pizza.Toppings |> List.ofSeq)
         let pizza = { pizza with Toppings = toppings} |> Some
         { state with Pizza = pizza }, Cmd.none
+    | Cancel | ConfirmConfig _ ->
+        { state with Pizza = None }, Cmd.none
+
+        
 
 open Bolero
 
@@ -102,5 +108,7 @@ let view (model : Model) dispatcher =
             .MinimumSize(Pizza.MinimumSize)
             .Size(pizza.Size.ToString())
             .SizeN(pizza.Size.ToString(), fun i ->  SizeUpdated (System.Int32.Parse (i)) |> dispatcher)
+            .Cancel(fun _ -> Cancel |> dispatcher)
+            .Confirm(fun _ -> ConfirmConfig pizza |> dispatcher)
             .Elt()
     | _ -> empty
