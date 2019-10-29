@@ -14,8 +14,7 @@
 </head>
 <body>
     <app>
-        @(await Html.RenderComponentAsync<Main.MyApp>
-            (RenderMode.ServerPrerendered))
+        @(await Html.RenderComponentAsync<Main.MyApp>(RenderMode.ServerPrerendered))
     </app>
     <script type="text/javascript" src="blazor.polyfill.min.js"></script>
     <script src="_framework/blazor.server.js"></script>

@@ -8,12 +8,27 @@ open Elmish
 open Services
 open PizzaConfig
 open Orders
+open Bolero
 
-type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model; Order : Orders.Model}
+type Page =
+   
+    | [<EndPoint "/">] Home                    
+    | [<EndPoint "/myOrders">] MyOrders 
+
+type Model = { 
+    specials: PizzaSpecial list
+    PizzaConfig : PizzaConfig.Model
+    Order : Orders.Model
+    Page : Page
+}
 type Message = 
     | SpecialsReceived of PizzaSpecial list 
     | PizzaConfigMsg of PizzaConfigMsg
     | OrderMsg of OrderMsg
+    | SetPage of Page
+
+
+let router = Router.infer SetPage (fun (m : Model) -> m.Page)
 
 let initModel (remote : PizzaService) =
     let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
@@ -21,11 +36,12 @@ let initModel (remote : PizzaService) =
     let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
     let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
     let cmd = Cmd.batch [ cmd ; pizzaConfigCmd]
-    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel }, cmd
+    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel; Page = Home }, cmd
     
 
 let update remote message model =
     match message with
+    | SetPage page -> { model with Page = page }, Cmd.none
     | SpecialsReceived d -> { model with specials = d }, Cmd.none
     | PizzaConfigMsg (ConfigDone p ) ->  model, Cmd.ofMsg (p |> PizzaAdded |> OrderMsg)
     | PizzaConfigMsg msg -> 
@@ -37,7 +53,6 @@ let update remote message model =
         
     
 open Bolero.Html
-open Bolero
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
@@ -75,10 +90,16 @@ let view ( model : Model) dispatch =
     let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
-            [attr.href ""; attr.``class`` "nav-tab"] 
+            [attr.href "/"; attr.``class`` "nav-tab"] 
             [
                 img [attr.src ("img/pizza-slice.svg" |> prependContent)] 
                 div [] [text "Get Pizza"]
+            ])
+        .MyOrders(navLink NavLinkMatch.All 
+            [attr.href "myOrders"; attr.``class`` "nav-tab"] 
+            [
+                img [attr.src ("img/bike.svg" |> prependContent)] 
+                div [] [text "My Orders"]
             ])
         .Body(content)
         .PizzaConfig(pizzaconfig)
@@ -95,9 +116,16 @@ type MyApp() =
         let update = update remote
         let init = initModel remote
         Program.mkProgram (fun _ -> init) update view
+        |> Program.withRouter router
 #if DEBUG
 
         |> Program.withConsoleTrace
         |> Program.withErrorHandler (printf "%A")
         |> Program.withHotReload
 #endif
+
+//type MyComponent() =
+//    inherit Component()
+
+//    override this.BuildRenderTree(builder) =
+//        builder.OpenComponent<Router>(0)

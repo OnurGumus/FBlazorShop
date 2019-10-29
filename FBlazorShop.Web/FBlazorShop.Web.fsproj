@@ -20,5 +20,8 @@
     <ProjectReference Include="..\FBlazorShop.EF\FBlazorShop.EF.fsproj" />
     <ProjectReference Include="..\FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Shared\" />
+  </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
