@@ -7,41 +7,34 @@ open Bolero.Remoting
 open Elmish
 open Services
 open PizzaConfig
+open Orders
 
-type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model; Order : Order option}
+type Model = { specials: PizzaSpecial list; PizzaConfig : PizzaConfig.Model; Order : Orders.Model}
 type Message = 
     | SpecialsReceived of PizzaSpecial list 
     | PizzaConfigMsg of PizzaConfigMsg
+    | OrderMsg of OrderMsg
 
 let initModel (remote : PizzaService) =
     let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
+    let orderModel, orderCmd = Orders.init()
     let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
     let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
     let cmd = Cmd.batch [ cmd ; pizzaConfigCmd]
-    { specials = []; PizzaConfig = pizzaConfigModel; Order = None }, cmd
+    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel }, cmd
     
 
 let update remote message model =
     match message with
     | SpecialsReceived d -> { model with specials = d }, Cmd.none
+    | PizzaConfigMsg (ConfigDone p ) ->  model, Cmd.ofMsg (p |> PizzaAdded |> OrderMsg)
     | PizzaConfigMsg msg -> 
-        let order = 
-            match msg with
-            | ConfirmConfig p ->
-                match model.Order with 
-                | Some order -> { order with Pizzas = p :: [yield! order.Pizzas] } |> Some
-                | _ ->
-                    {
-                        OrderId = 0
-                        UserId = ""
-                        CreatedTime = System.DateTime.Now
-                        DeliveryAddress = Unchecked.defaultof<_>
-                        DeliveryLocation = Unchecked.defaultof<_>
-                        Pizzas = [p]
-                    } |> Some
-            | _ -> model.Order
         let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
-        {model with PizzaConfig = pizzaConfigModel; Order = order}, Cmd.map PizzaConfigMsg cmd
+        {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
+    | OrderMsg msg ->
+        let orderModel, cmd =  Orders.update model.Order msg
+        {model with Order = orderModel}, Cmd.map OrderMsg cmd
+        
     
 open Bolero.Html
 open Bolero
@@ -72,20 +65,7 @@ let view ( model : Model) dispatch =
         cond model.specials <| function
         | [] -> empty
         | _ ->
-            let orderContents = 
-                
-                let empty = div [attr.``class`` "empty-cart"] [text "Choose a pizza"; br[]; text "to get started"]
-                cond model.Order <| function
-                | Some o -> 
-                    cond (o.Pizzas.Count = 0) <| function
-                    | true -> empty
-                    | _ -> 
-                        div [attr.``class`` "order-contents"][
-                            h2 [] [text "Your order"]
-                            forEach (o.Pizzas) (fun p -> text (p.ToString()))
-                        ]
-                | _ -> empty
-            
+            let orderContents = Orders.view model.Order  (OrderMsg >> dispatch )
             PizzaCards()
                 .Items(forEach model.specials <| fun i ->
                     ecomp<ViewItem,_,_> i dispatch)

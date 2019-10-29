@@ -9,14 +9,15 @@ open System
 
 type Model = { Pizza : Pizza option; Toppings : Topping list }
 
-type PizzaConfigMsg= 
+type PizzaConfigMsg = 
     | PizzaConfigRequested of PizzaSpecial
     | SizeUpdated of int
     | ToppingsReceived of Topping list
     | ToppingSelected of int
     | ToppingRemoved of PizzaTopping
     | Cancel
-    | ConfirmConfig of Pizza
+    | ConfirmConfig
+    | ConfigDone of Pizza
 
 let init (remote : PizzaService ) () = 
     let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
@@ -52,7 +53,9 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
         let toppings = pizzaTopping :: (pizza.Toppings |> List.ofSeq)
         let pizza = { pizza with Toppings = toppings} |> Some
         { state with Pizza = pizza }, Cmd.none
-    | Cancel | ConfirmConfig _ ->
+    | ConfirmConfig ->
+        { state with Pizza = None }, Cmd.ofMsg(ConfigDone state.Pizza.Value)
+    | Cancel | ConfigDone _ ->
         { state with Pizza = None }, Cmd.none
 
         
@@ -109,7 +112,7 @@ let view (model : Model) dispatcher =
             .Size(pizza.Size.ToString())
             .SizeN(pizza.Size.ToString(), fun i ->  SizeUpdated (System.Int32.Parse (i)) |> dispatcher)
             .Cancel(fun _ -> Cancel |> dispatcher)
-            .Confirm(fun _ -> ConfirmConfig pizza |> dispatcher)
+            .Confirm(fun _ -> ConfirmConfig  |> dispatcher)
             .Elt()
     | _ -> empty
 
