@@ -32,17 +32,50 @@ let update ( state : Model) (msg : OrderMsg) : Model * Cmd<_> =
                     Pizzas = [p]
                 } |> Some
         { Order = order }, Cmd.none
-    | _ -> state, Cmd.none
+    | PizzaRemoved tobeRemoved -> 
+        let pizzas = [yield! state.Order.Value.Pizzas] |> List.filter (fun p -> System.Object.ReferenceEquals(tobeRemoved,p) |> not)
+        if pizzas.Length = 0 then
+            {state with Order = None}, Cmd.none
+        else
+        let order =
+                { state.Order.Value with Pizzas = pizzas}
+        { state with Order = Some order}, Cmd.none
 
 let view (state : Model) dispatcher =
     let noOrder = div [attr.``class`` "empty-cart"] [text "Choose a pizza"; br[]; text "to get started"]
-    cond state.Order <| function
-    | Some o -> 
-        cond (o.Pizzas.Count = 0) <| function
-        | true -> noOrder
-        | _ -> 
-            div [attr.``class`` "order-contents"][
-                h2 [] [text "Your order"]
-                forEach (o.Pizzas) (fun p -> text (p.ToString()))
+
+    let cartItem (pizza : Pizza) =
+        div [attr.``class`` "cart-item"] [
+            a [on.click (fun _ ->   pizza |> PizzaRemoved |> dispatcher); attr.``class`` "delete-item"] [text "x"]
+            div [attr.``class`` "title"] [textf "%s\" %s" (pizza.Size.ToString()) pizza.Special.Name]
+            ul [][
+                forEach pizza.Toppings (fun t -> li [] [textf "+%s" t.Topping.Name])
             ]
-    | _ -> noOrder
+            div [attr.``class`` "item-price"][
+                text pizza.FormattedTotalPrice
+            ]
+        ]
+
+    let upper = 
+        cond state.Order <| function
+        | Some o -> 
+            cond (o.Pizzas.Count = 0) <| function
+            | true -> noOrder
+            | _ -> 
+                div [attr.``class`` "order-contents"][
+                    h2 [] [text "Your order"]
+                    forEach o.Pizzas cartItem 
+                ]
+        | _ -> noOrder
+
+    let lower =
+        cond state.Order <| function
+        | Some order ->
+            div [attr.``class`` "order-total" ][
+                text "Total:"
+                span [attr.``class`` "total-price"] [text (order.FormattedTotalPrice)]
+                button [attr.``class`` "btn btn-warning";][ text "Order >"]
+            ]
+        | _ -> empty
+
+    span [] [ upper; lower]
