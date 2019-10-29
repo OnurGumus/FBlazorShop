@@ -72,9 +72,24 @@ let view ( model : Model) dispatch =
         cond model.specials <| function
         | [] -> empty
         | _ ->
+            let orderContents = 
+                
+                let empty = div [attr.``class`` "empty-cart"] [text "Choose a pizza"; br[]; text "to get started"]
+                cond model.Order <| function
+                | Some o -> 
+                    cond (o.Pizzas.Count = 0) <| function
+                    | true -> empty
+                    | _ -> 
+                        div [attr.``class`` "order-contents"][
+                            h2 [] [text "Your order"]
+                            forEach (o.Pizzas) (fun p -> text (p.ToString()))
+                        ]
+                | _ -> empty
+            
             PizzaCards()
                 .Items(forEach model.specials <| fun i ->
                     ecomp<ViewItem,_,_> i dispatch)
+                .OrderContents(orderContents)
                 .Elt()
     
     let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
@@ -87,6 +102,7 @@ let view ( model : Model) dispatch =
             ])
         .Body(content)
         .PizzaConfig(pizzaconfig)
+        
         .Elt()
 
 open Bolero.Templating.Client

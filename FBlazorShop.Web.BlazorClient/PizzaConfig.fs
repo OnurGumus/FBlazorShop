@@ -64,18 +64,18 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
         label [] [ text "Extra Toppings:"]
         let length = toppings.Length
         cond (length = 0)  <| function
-            | true ->
-                select [attr.``class`` "custom-select"; attr.disabled true] [
-                    option [] [text "(loading...)"]
-                ]
-            | _ ->
-                cond (pizza.Toppings.Count >= 6) <| function 
-                | true -> div [] [text "(maximum reached)"]
-                | _ ->
-                    select [attr.``class`` "custom-select" ; on.change (fun e -> e.Value |> Convert.ToInt32 |> ToppingSelected |> dispatcher )] [
-                        option [ attr.disabled true; attr.selected true; attr.value -1] [text "select"]
-                        forEach (toppings |> List.mapi (fun i t -> (i,t))) ( fun (i,t) -> option [ attr.value i] [textf "%s - $%s" t.Name t.FormattedBasePrice] )
-                    ]
+        | true ->
+            select [attr.``class`` "custom-select"; attr.disabled true] [
+                option [] [text "(loading...)"]
+            ]
+        | _ ->
+        cond (pizza.Toppings.Count >= 6) <| function 
+        | true -> div [] [text "(maximum reached)"]
+        | _ ->
+            select [attr.``class`` "custom-select" ; on.change (fun e -> e.Value |> Convert.ToInt32 |> ToppingSelected |> dispatcher )] [
+                option [ attr.disabled true; attr.selected true; attr.value -1] [text "select"]
+                forEach (toppings |> List.mapi (fun i t -> (i,t))) ( fun (i,t) -> option [ attr.value i] [textf "%s - $%s" t.Name t.FormattedBasePrice] )
+            ]
                 
     ]
 
@@ -112,3 +112,4 @@ let view (model : Model) dispatcher =
             .Confirm(fun _ -> ConfirmConfig pizza |> dispatcher)
             .Elt()
     | _ -> empty
+
