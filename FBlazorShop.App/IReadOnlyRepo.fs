@@ -1,6 +1,5 @@
 ﻿namespace  FBlazorShop.App
 open System.Linq
-open System.Collections.Immutable
 open System.Threading.Tasks
 open System.Collections.Generic
 

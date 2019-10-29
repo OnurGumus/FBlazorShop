@@ -1,15 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Model.fs" />
-    <Compile Include="IOrderService.fs" />
-    <Compile Include="IReadOnlyRepo.fs" />
+    <Compile Include="Extensions.fs" />
+    <Compile Include="Library.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FBlazorShop.App\FBlazorShop.App.fsproj" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

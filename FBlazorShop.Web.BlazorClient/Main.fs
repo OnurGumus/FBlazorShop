@@ -77,15 +77,18 @@ type ViewItem() =
 
 let view ( model : Model) dispatch =
     let content =
-        cond model.specials <| function
-        | [] -> empty
-        | _ ->
-            let orderContents = Orders.view model.Order  (OrderMsg >> dispatch )
-            PizzaCards()
-                .Items(forEach model.specials <| fun i ->
-                    ecomp<ViewItem,_,_> i dispatch)
-                .OrderContents(orderContents)
-                .Elt()
+        cond model.Page <| function
+        | Home ->
+            cond model.specials <| function
+            | [] -> empty
+            | _ ->
+                let orderContents = Orders.view model.Order  (OrderMsg >> dispatch )
+                PizzaCards()
+                    .Items(forEach model.specials <| fun i ->
+                        ecomp<ViewItem,_,_> i dispatch)
+                    .OrderContents(orderContents)
+                    .Elt()
+        | MyOrders -> empty
     
     let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
     MainLayout()

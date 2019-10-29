@@ -12,9 +12,11 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.App", "FBlazorS
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.EF", "FBlazorShop.EF\FBlazorShop.EF.fsproj", "{A4661691-55E6-456E-AD37-0C10E0972064}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FBlazorShop.Web", "FBlazorShop.Web\FBlazorShop.Web.fsproj", "{39D513B7-AC4B-480F-B386-2E0C5FA74707}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.Web", "FBlazorShop.Web\FBlazorShop.Web.fsproj", "{39D513B7-AC4B-480F-B386-2E0C5FA74707}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FBlazorShop.Web.BlazorClient", "FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj", "{19E673D1-D2FB-432B-ABD5-6B328983E5A9}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.Web.BlazorClient", "FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj", "{19E673D1-D2FB-432B-ABD5-6B328983E5A9}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FBlazorShop", "FBlazorShop\FBlazorShop.fsproj", "{4EC8E458-814D-4885-896D-C368DEDC84FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +40,10 @@ Global
 		{19E673D1-D2FB-432B-ABD5-6B328983E5A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{19E673D1-D2FB-432B-ABD5-6B328983E5A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{19E673D1-D2FB-432B-ABD5-6B328983E5A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,5 +1,4 @@
 FSharp.Core
-System.Collections.Immutable
 System.Threading.Tasks
 System.Threading.Tasks.Extensions
 TaskBuilder.fs
