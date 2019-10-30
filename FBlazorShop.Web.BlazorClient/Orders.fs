@@ -12,11 +12,13 @@ type Model = { Order : Order option; }
 type OrderMsg = 
     | PizzaAdded of Pizza
     | PizzaRemoved of Pizza
+    | OrderPlaced of Order
+    | OrderAccepted of int
 
 let init () = 
     { Order = None; }, Cmd.none
 
-let update ( state : Model) (msg : OrderMsg) : Model * Cmd<_> = 
+let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * Cmd<_> = 
     match msg with
     | PizzaAdded p ->
         let order = 
@@ -40,6 +42,10 @@ let update ( state : Model) (msg : OrderMsg) : Model * Cmd<_> =
         let order =
                 { state.Order.Value with Pizzas = pizzas}
         { state with Order = Some order}, Cmd.none
+    | OrderPlaced o -> 
+        let cmd = Cmd.ofAsync remote.placeOrder o OrderAccepted raise
+        state, cmd
+    | _ -> state, Cmd.none
 
 let view (state : Model) dispatcher =
     let noOrder = div [attr.``class`` "empty-cart"] [text "Choose a pizza"; br[]; text "to get started"]
@@ -59,7 +65,7 @@ let view (state : Model) dispatcher =
     let upper = 
         cond state.Order <| function
         | Some o -> 
-            cond (o.Pizzas.Count = 0) <| function
+            cond (o.Pizzas.Length = 0) <| function
             | true -> noOrder
             | _ -> 
                 div [attr.``class`` "order-contents"][
@@ -74,7 +80,7 @@ let view (state : Model) dispatcher =
             div [attr.``class`` "order-total" ][
                 text "Total:"
                 span [attr.``class`` "total-price"] [text (order.FormattedTotalPrice)]
-                button [attr.``class`` "btn btn-warning";][ text "Order >"]
+                button [attr.``class`` "btn btn-warning"; on.click (fun _ -> order |> OrderPlaced |> dispatcher)][ text "Order >"]
             ]
         | _ -> empty
 

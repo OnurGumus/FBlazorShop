@@ -25,5 +25,13 @@ type public PizzaService(ctx: IRemoteContext) =
            {
                getSpecials = this.GetItems<PizzaSpecial>()
                getToppings = this.GetItems<Topping>()
+               getOrders = this.GetItems<Order>()
+               placeOrder = 
+                fun order -> 
+                    async {
+                        let orderService = this.GetService<IOrderService>()
+                        let! i = order |> orderService.PlaceOrder  |> Async.AwaitTask
+                        return i
+                    }
            }
    

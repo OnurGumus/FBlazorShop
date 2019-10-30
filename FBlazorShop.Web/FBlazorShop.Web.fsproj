@@ -19,6 +19,7 @@
     <ProjectReference Include="..\FBlazorShop.App\FBlazorShop.App.fsproj" />
     <ProjectReference Include="..\FBlazorShop.EF\FBlazorShop.EF.fsproj" />
     <ProjectReference Include="..\FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj" />
+    <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Shared\" />

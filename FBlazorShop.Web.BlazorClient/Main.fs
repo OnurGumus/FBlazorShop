@@ -47,8 +47,9 @@ let update remote message model =
     | PizzaConfigMsg msg -> 
         let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
         {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
+    | OrderMsg (OrderAccepted _) -> model, Cmd.ofMsg (SetPage MyOrders)
     | OrderMsg msg ->
-        let orderModel, cmd =  Orders.update model.Order msg
+        let orderModel, cmd =  Orders.update remote model.Order msg
         {model with Order = orderModel}, Cmd.map OrderMsg cmd
         
     

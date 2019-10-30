@@ -38,7 +38,7 @@ type Pizza = {
     Special : PizzaSpecial
     SpecialId : int
     Size : int
-    Toppings : IReadOnlyList<PizzaTopping>
+    Toppings : PizzaTopping list
 }
 with 
     static member DefaultSize = 12
@@ -73,7 +73,7 @@ type Order = {
     CreatedTime : DateTime
     DeliveryAddress : Address
     DeliveryLocation : LatLong
-    Pizzas : IReadOnlyList<Pizza>
+    Pizzas : Pizza list
 }
 with
     member this.TotalPrice = this.Pizzas.Sum(fun p -> p.TotalPrice)

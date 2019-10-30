@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="OrderService.fs" />
     <Compile Include="Extensions.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>

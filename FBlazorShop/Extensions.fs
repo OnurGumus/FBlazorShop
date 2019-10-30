@@ -2,7 +2,6 @@
 
 open System.Runtime.CompilerServices
 open Microsoft.Extensions.DependencyInjection
-open System
 open FBlazorShop.App
 open FBlazorShop.App.Model
 
@@ -11,3 +10,6 @@ type EFExtensions() =
     [<Extension>]
     static member inline SetupServices(services: IServiceCollection) = 
         services
+            .AddScoped<IOrderService,OrderService>()
+            .AddScoped<OrderService>(fun p -> downcast p.GetService<IOrderService>())
+            .AddScoped<IReadOnlyRepo<Order>,OrderReadOnlyRepo>()

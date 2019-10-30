@@ -72,7 +72,7 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
                 option [] [text "(loading...)"]
             ]
         | _ ->
-        cond (pizza.Toppings.Count >= 6) <| function 
+        cond (pizza.Toppings.Length >= 6) <| function 
         | true -> div [] [text "(maximum reached)"]
         | _ ->
             select [attr.``class`` "custom-select" ; on.change (fun e -> e.Value |> Convert.ToInt32 |> ToppingSelected |> dispatcher )] [

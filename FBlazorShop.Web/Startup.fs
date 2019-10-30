@@ -9,7 +9,7 @@ open Microsoft.Extensions.Hosting
 open FBlazorShop.EF
 open Bolero.Templating.Server
 open Bolero.Remoting.Server
-
+open FBlazorShop
 type Startup() =
     member _.ConfigureServices(services: IServiceCollection) =
 
@@ -19,6 +19,7 @@ type Startup() =
         #endif
             .AddRemoting<Services.PizzaService>() 
             .AddEF("Data Source=pizza.db") 
+            .SetupServices()
             .AddMvc()
             .AddRazorRuntimeCompilation() |> ignore
            
