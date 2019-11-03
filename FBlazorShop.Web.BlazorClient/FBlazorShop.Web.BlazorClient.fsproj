@@ -10,8 +10,10 @@
   <ItemGroup>
     <Compile Include="BoleroHelpers.fs" />
     <Compile Include="Services.fs" />
-    <Compile Include="Orders.fs" />
-    <Compile Include="PizzaConfig.fs" />
+    <Compile Include="MyOrders.fs" />
+    <Compile Include="Home\PizzaConfig.fs" />
+    <Compile Include="Home\Orders.fs" />
+    <Compile Include="Home\Home.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>

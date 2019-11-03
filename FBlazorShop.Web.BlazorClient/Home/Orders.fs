@@ -35,7 +35,7 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
                 } |> Some
         { Order = order }, Cmd.none
     | PizzaRemoved tobeRemoved -> 
-        let pizzas = [yield! state.Order.Value.Pizzas] |> List.filter (fun p -> System.Object.ReferenceEquals(tobeRemoved,p) |> not)
+        let pizzas = [yield! state.Order.Value.Pizzas] |> List.filter (fun p -> p <> tobeRemoved)
         if pizzas.Length = 0 then
             {state with Order = None}, Cmd.none
         else
@@ -48,7 +48,10 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
     | _ -> state, Cmd.none
 
 let view (state : Model) dispatcher =
-    let noOrder = div [attr.``class`` "empty-cart"] [text "Choose a pizza"; br[]; text "to get started"]
+    let noOrder = 
+        div [attr.``class`` "empty-cart"] [
+            text "Choose a pizza"; br[]; text "to get started"
+        ]
 
     let cartItem (pizza : Pizza) =
         div [attr.``class`` "cart-item"] [
@@ -84,4 +87,4 @@ let view (state : Model) dispatcher =
             ]
         | _ -> empty
 
-    span [] [ upper; lower]
+    concat [ upper; lower]

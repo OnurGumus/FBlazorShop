@@ -11,87 +11,77 @@ open Orders
 open Bolero
 
 type Page =
-   
-    | [<EndPoint "/">] Home                    
-    | [<EndPoint "/myOrders">] MyOrders 
+    | [<EndPoint "/">] Home   of Model : PageModel<Home.Model>                  
+    | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
 
 type Model = { 
-    specials: PizzaSpecial list
-    PizzaConfig : PizzaConfig.Model
-    Order : Orders.Model
     Page : Page
 }
+
 type Message = 
-    | SpecialsReceived of PizzaSpecial list 
-    | PizzaConfigMsg of PizzaConfigMsg
-    | OrderMsg of OrderMsg
     | SetPage of Page
+    | HomeMsg of Home.Message
+    | MyOrdersMsg of MyOrders.Message
 
+let defaultPageModel remote = function
+| MyOrders m -> Router.definePageModel m (MyOrders.init remote () |> fst)
+| Home m ->Router.definePageModel m (Home.init remote |> fst)
 
-let router = Router.infer SetPage (fun (m : Model) -> m.Page)
+let router remote = Router.inferWithModel SetPage (fun (m : Model) -> m.Page) (defaultPageModel remote)
+//let initModel (remote : PizzaService) =
+//    let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
+//    let orderModel, orderCmd = Orders.init()
+//    let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
+//    let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
+//    let cmd = Cmd.batch [ cmd ; pizzaConfigCmd; orderCmd]
+//    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel; Page = Home }, cmd
 
-let initModel (remote : PizzaService) =
-    let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
-    let orderModel, orderCmd = Orders.init()
-    let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
-    let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
-    let cmd = Cmd.batch [ cmd ; pizzaConfigCmd]
-    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel; Page = Home }, cmd
-    
+let init remote  = 
+    let homeModel, homeCmd = Home.init remote
+    let home = { Model = homeModel  } |> Home
+    {Page = home },  Cmd.map HomeMsg homeCmd
 
-let update remote message model =
-    match message with
-    | SetPage page -> { model with Page = page }, Cmd.none
-    | SpecialsReceived d -> { model with specials = d }, Cmd.none
-    | PizzaConfigMsg (ConfigDone p ) ->  model, Cmd.ofMsg (p |> PizzaAdded |> OrderMsg)
-    | PizzaConfigMsg msg -> 
-        let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
-        {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
-    | OrderMsg (OrderAccepted _) -> model, Cmd.ofMsg (SetPage MyOrders)
-    | OrderMsg msg ->
-        let orderModel, cmd =  Orders.update remote model.Order msg
-        {model with Order = orderModel}, Cmd.map OrderMsg cmd
+let update remote message (model : Model) =
+    match message, model.Page with
+    | SetPage(Home _  ), _ -> init remote
+    | SetPage(MyOrders _ as page),_ -> { model with Page = page }, Cmd.none
+    | HomeMsg msg, Home homeModel ->
+        let homeModel, cmd = Home.update remote msg homeModel.Model
+        {model with Page = Home({ Model = homeModel})}, Cmd.map HomeMsg cmd
+    | MyOrdersMsg msg, MyOrders myOrdersModel ->
+        let myOrdersModel, cmd = MyOrders.update  msg myOrdersModel.Model
+        {model with Page = MyOrders({ Model = myOrdersModel})}, Cmd.map HomeMsg cmd
+    | _ -> failwith "not supported"
+    //| SpecialsReceived d -> { model with specials = d }, Cmd.none
+    //| PizzaConfigMsg (ConfigDone p ) ->  model, Cmd.ofMsg (p |> PizzaAdded |> OrderMsg)
+    //| PizzaConfigMsg msg -> 
+    //    let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
+    //    {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
+    //| OrderMsg (OrderAccepted _) -> 
+    //    let cmd = MyOrders.init remote () |> snd
+    //    let init = { Model = {MyOrders = None } } : PageModel<MyOrders.Model>
+    //    model, init |> MyOrders |> SetPage |> Cmd.ofMsg
+    //| OrderMsg msg ->
+    //    let orderModel, cmd =  Orders.update remote model.Order msg
+        //{model with Order = orderModel}, Cmd.map OrderMsg cmd
+    //| MyOrderMsg msg ->
+    //    let orderModel, cmd = MyOrders.update msg model.Order 
+    //    {model with Page = MyOrders ( model.Page.)}, Cmd.map MyOrderMsg cmd
         
     
 open Bolero.Html
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
-type PizzaCards = Template<"wwwroot\PizzaCards.html">
 
-type ViewItem() =
-    inherit ElmishComponent<PizzaSpecial, Message>()
-
-    override __.View special dispatch =
-
-        PizzaCards.Item()
-            .description(special.Description)
-            .imageurl(special.ImageUrl |> prependContent)
-            .name(special.Name)
-            .price(special.FormattedBasePrice)
-            .specialSelected(fun _ -> 
-                special
-                |> PizzaConfigRequested
-                |> PizzaConfigMsg
-                |> dispatch)
-            .Elt()
 
 let view ( model : Model) dispatch =
     let content =
         cond model.Page <| function
-        | Home ->
-            cond model.specials <| function
-            | [] -> empty
-            | _ ->
-                let orderContents = Orders.view model.Order  (OrderMsg >> dispatch )
-                PizzaCards()
-                    .Items(forEach model.specials <| fun i ->
-                        ecomp<ViewItem,_,_> i dispatch)
-                    .OrderContents(orderContents)
-                    .Elt()
-        | MyOrders -> empty
+        | Home (model) ->
+          Home.view model.Model (HomeMsg >> dispatch)
+        | MyOrders model -> MyOrders.view model.Model (MyOrdersMsg >> dispatch)
     
-    let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href "/"; attr.``class`` "nav-tab"] 
@@ -106,11 +96,10 @@ let view ( model : Model) dispatch =
                 div [] [text "My Orders"]
             ])
         .Body(content)
-        .PizzaConfig(pizzaconfig)
-        
         .Elt()
 
 open Bolero.Templating.Client
+
 
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
@@ -118,9 +107,8 @@ type MyApp() =
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update remote
-        let init = initModel remote
-        Program.mkProgram (fun _ -> init) update view
-        |> Program.withRouter router
+        Program.mkProgram (fun _ -> init remote ) update view
+        |> Program.withRouter (router remote)
 #if DEBUG
 
         |> Program.withConsoleTrace
