@@ -1,0 +1,37 @@
+﻿<div class="track-order">
+    <div class="track-order-title">
+        <h2>
+            Order placed ${OrderCreatedTimeToLongDateString}
+        </h2>
+        <p class="ml-auto mb-0">
+            Status: <strong>${StatusText}</strong>
+        </p>
+    </div>
+    <div class="track-order-body">
+        <div class="track-order-details">
+            ${PizzaItems}
+            <template id="PizzaItem">
+                <p>
+                    <strong>
+                        ${Size}"
+                        ${SpecialName}
+                        (£${FormattedTotalPrice})
+                    </strong>
+                </p>
+
+                <ul>
+                    ${ToppingItems}
+                    <template id="ToppingItem">
+                        <li>+ ${ToppingName}</li>
+                    </template>
+                </ul>
+            </template>
+            <p>
+                <strong>
+                    Total price:
+                    £(${FormattedTotalPrice})
+                </strong>
+            </p>
+        </div>
+    </div>
+</div>

@@ -70,8 +70,16 @@ let update remote message (model : Model)  : Model * Cmd<_>=
 
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
+    | OrderDetailMsg(OrderDetail.Message.OrderLoaded _), page 
+        when (page |> function | OrderDetail _ -> false | _ -> true) -> 
+        model, Cmd.none
     | OrderDetailMsg msg, OrderDetail(key, orderModel) ->
-        genericUpdate (OrderDetail.update)(orderModel.Model) msg OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
+        genericUpdate 
+            (OrderDetail.update remote)
+            (orderModel.Model)
+            msg 
+            OrderDetailMsg 
+            (fun pageModel -> OrderDetail(key, pageModel))
         
     | _ -> failwith "not supported" 
 
