@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open System.Linq
+open System
 
 /// <summary>
 /// Represents a pre-configured template for a pizza a user can order
@@ -64,7 +65,10 @@ type LatLong = {
     Latitude : double
     Longitude : double
 }
-open System
+with static member  Interpolate (start : LatLong) (endd : LatLong)  proportion = {
+        Latitude = start.Latitude + (endd.Latitude - start.Latitude) * proportion;
+        Longitude = start.Longitude + (endd.Longitude - start.Longitude) * proportion
+    }
 
 [<CLIMutable>]
 type Order = {
@@ -78,3 +82,57 @@ type Order = {
 with
     member this.TotalPrice = this.Pizzas.Sum(fun p -> p.TotalPrice)
     member this.FormattedTotalPrice =  this.TotalPrice.ToString("0.00")
+
+type Marker = {
+    Description : string
+    X: double
+    Y: double
+    ShowPopup : bool
+}
+type OrderWithStatus ={
+    Order : Order
+    StatusText : string 
+    MapMarkers : Marker list
+}
+with
+    static member PreparationDuration = TimeSpan.FromSeconds(10.0)
+    static member DeliveryDuration = TimeSpan.FromMinutes(1.0)
+    static member ToMapMarker description  coords showPopup =
+        { 
+            Description = description
+            X = coords.Longitude
+            Y = coords.Latitude; ShowPopup = showPopup 
+        }
+
+    static member  ComputeStartPosition( order : Order) =
+        let rng = Random(order.OrderId)
+        let distance = 0.01 + rng.NextDouble() * 0.02
+        let angle = rng.NextDouble() * Math.PI * 2.0
+        let offset = (distance * Math.Cos(angle)), (distance * Math.Sin(angle))
+        { 
+            Latitude = order.DeliveryLocation.Latitude + (offset |> fst) 
+            Longitude = order.DeliveryLocation.Longitude + (offset |> snd)} : LatLong
+
+    static member FromOrder (order : Order) =
+        let dispatchTime = order.CreatedTime.Add(OrderWithStatus.PreparationDuration);
+        let statusText, mapMarkers =
+            if DateTime.Now < dispatchTime then
+                "Preparing", [OrderWithStatus.ToMapMarker "You" order.DeliveryLocation true]
+            elif DateTime.Now < dispatchTime + OrderWithStatus.DeliveryDuration then
+                let startPosition = OrderWithStatus.ComputeStartPosition order
+
+                let proportionOfDeliveryCompleted = 
+                    Math.Min(1.0, (DateTime.Now - dispatchTime).TotalMilliseconds / OrderWithStatus.DeliveryDuration.TotalMilliseconds)
+
+                let driverPosition = LatLong.Interpolate startPosition order.DeliveryLocation proportionOfDeliveryCompleted
+
+                "Out for delivery", [
+                    OrderWithStatus.ToMapMarker "You" order.DeliveryLocation false 
+                    OrderWithStatus.ToMapMarker "Driver" driverPosition true]
+            else 
+               "Delivered", [OrderWithStatus.ToMapMarker "Delivery location" order.DeliveryLocation true]
+        { 
+            Order = order
+            StatusText = statusText
+            MapMarkers = mapMarkers}
+

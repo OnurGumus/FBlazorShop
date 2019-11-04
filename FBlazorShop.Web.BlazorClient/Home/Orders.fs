@@ -30,7 +30,7 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
                     UserId = ""
                     CreatedTime = System.DateTime.Now
                     DeliveryAddress = Unchecked.defaultof<_>
-                    DeliveryLocation = Unchecked.defaultof<_>
+                    DeliveryLocation = { Latitude = 51.5001 ; Longitude = -0.1239}
                     Pizzas = [p]
                 } |> Some
         { Order = order }, Cmd.none

@@ -1,0 +1,22 @@
+﻿<div class="list-group orders-list">
+    ${Items}
+    <template id="OrderItem">
+        <div class="list-group-item">
+            <div class="col">
+                <h5>${OrderCreatedTime}</h5>
+                Items:
+                <strong>${OrderPizzasCount}</strong>;
+                Total price:
+                <strong>£${OrderFormattedTotalPrice}</strong>
+            </div>
+            <div class="col">
+                Status: <strong>${StatusText}</strong>
+            </div>
+            <div class="col flex-grow-0">
+                <a href="myorders/${OrderOrderId}" class="btn btn-success">
+                    Track &gt;
+                </a>
+            </div>
+        </div>
+    </template>
+</div>

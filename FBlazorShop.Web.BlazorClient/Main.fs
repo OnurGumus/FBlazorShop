@@ -24,13 +24,13 @@ type Message =
     | MyOrdersMsg of MyOrders.Message
 
 let defaultPageModel remote = function
-| MyOrders m -> Router.definePageModel m (MyOrders.init remote () |> fst)
-| Home m ->Router.definePageModel m (Home.init remote () |> fst)
+| MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
+| Home m ->Router.definePageModel m (Home.init remote |> fst)
 
 let router remote = Router.inferWithModel SetPage (fun (m : Model) -> m.Page) (defaultPageModel remote)
 
 let inline initPage init msg page =
-    let model, cmd = init ()
+    let model, cmd = init 
     let page = { Model = model  } |> page
     {Page = page }, Cmd.map msg cmd
 
@@ -39,26 +39,30 @@ let initMyOrders remote =
 
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
-    
-let init remote () = initHome remote
 
+
+let init remote = initHome remote
+ 
 let update remote message (model : Model)  : Model * Cmd<_>=
+    
+    let genericUpdate update subModel msg  msgFn pageFn =
+        let subModel, cmd = update  msg subModel
+        {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
+
     match message, model.Page with
     | SetPage(Home _  ), _ -> initHome remote
     | SetPage(MyOrders _),_ -> initMyOrders remote
 
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
-        let myOrdersModel, cmd = MyOrders.update  msg myOrdersModel.Model
-        {model with Page = MyOrders({ Model = myOrdersModel})}, Cmd.map HomeMsg cmd
-  
+        genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
+   
     | HomeMsg (Home.Message.OrderMsg (OrderAccepted _)),_  -> 
-        let orderModel = MyOrders.init remote () |> fst
+        let orderModel = MyOrders.init remote |> fst
         let init = { Model = orderModel } 
         model, init |> MyOrders |> SetPage |> Cmd.ofMsg
 
     | HomeMsg msg, Home homeModel ->
-        let homeModel, cmd = Home.update remote msg homeModel.Model
-        {model with Page = Home({ Model = homeModel})}, Cmd.map HomeMsg cmd
+        genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
  
     | _ -> failwith "not supported"
 
@@ -101,7 +105,7 @@ type MyApp() =
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update remote
-        Program.mkProgram (fun _ -> init remote () ) update view
+        Program.mkProgram (fun _ -> init remote) update view
         |> Program.withRouter (router remote)
 #if DEBUG
 

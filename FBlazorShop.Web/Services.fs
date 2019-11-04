@@ -21,17 +21,24 @@ type public PizzaService(ctx: IRemoteContext) =
                           |> Async.AwaitTask 
                       return b |> List.ofSeq
                 }
-        override this.Handler =
-           {
-               getSpecials = this.GetItems<PizzaSpecial>()
-               getToppings = this.GetItems<Topping>()
-               getOrders = this.GetItems<Order>()
-               placeOrder = 
+        override this.Handler = {
+        
+            getSpecials = this.GetItems<PizzaSpecial>()
+            getToppings = this.GetItems<Topping>()
+            getOrders = this.GetItems<Order>()
+            getOrderWithStatuses = 
+                fun () -> 
+                    async{
+                        let! orders = this.GetItems<Order>()() 
+                        let statuses = orders |> List.map OrderWithStatus.FromOrder
+                        return statuses
+                    }
+            placeOrder = 
                 fun order -> 
                     async {
                         let orderService = this.GetService<IOrderService>()
                         let! i = order |> orderService.PlaceOrder  |> Async.AwaitTask
                         return i
                     }
-           }
+        }
    

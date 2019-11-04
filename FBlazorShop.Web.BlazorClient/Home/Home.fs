@@ -19,7 +19,7 @@ type Message =
 
 open Elmish
 
-let init (remote: PizzaService) () =
+let init (remote: PizzaService) =
     let pizzaConfigModel, pizzaConfigCmd = PizzaConfig.init remote ()
     let orderModel, orderCmd = Orders.init()
     let pizzaConfigCmd = Cmd.map PizzaConfigMsg pizzaConfigCmd
@@ -41,10 +41,7 @@ let update remote message model =
     | PizzaConfigMsg msg ->
         let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
         { model with PizzaConfig = pizzaConfigModel }, Cmd.map PizzaConfigMsg cmd
-    //| OrderMsg (OrderAccepted _) ->
-    //    let cmd = MyOrders.init remote () |> snd
-    //    let init = { Model = {MyOrders = None } } : PageModel<MyOrders.Model>
-    //    model, init |> MyOrders |> SetPage |> Cmd.ofMsg
+   
     | OrderMsg msg ->
         let orderModel, cmd = Orders.update remote model.Order msg
         { model with Order = orderModel }, Cmd.map OrderMsg cmd

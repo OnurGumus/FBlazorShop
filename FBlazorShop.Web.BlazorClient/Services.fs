@@ -8,6 +8,7 @@ type public PizzaService =
         getSpecials : unit -> Async<PizzaSpecial list>
         getToppings : unit -> Async<Topping list>
         getOrders : unit -> Async<Order list>
+        getOrderWithStatuses : unit -> Async<OrderWithStatus list>
         placeOrder : Order -> Async<int>
     }
     interface IRemoteService with

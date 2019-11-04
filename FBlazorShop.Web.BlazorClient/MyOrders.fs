@@ -5,19 +5,21 @@ open Elmish
 open FBlazorShop.Web.BlazorClient.Services
 open Bolero
 
-type Model = { MyOrders : Order list option}
+type Model = { MyOrders : OrderWithStatus list option}
 
 type Message =
-    | OrdersLoaded  of Order list
+    | OrdersLoaded  of OrderWithStatus list
 
-let init (remote : PizzaService) () =
-    { MyOrders = None } , Cmd.ofAsync remote.getOrders () OrdersLoaded raise
+let init (remote : PizzaService)  =
+    { MyOrders = None } , Cmd.ofAsync remote.getOrderWithStatuses () OrdersLoaded raise
 
 let update message model = 
     match message with
     | OrdersLoaded orders -> { MyOrders = Some orders }, Cmd.none
 
 open Bolero.Html
+type OrderList = Template<"wwwroot\MyOrders.html">
+
 let view (model : Model) dispatch =
     concat [
         div [attr.``class`` "main"][
@@ -28,21 +30,15 @@ let view (model : Model) dispatch =
                         h2 [] [ text "No orders placed"]
                         a [attr.href ""; attr.``class`` "btn btn-success"][ text "Order some pizza"]
                     ]
-                | Some orders -> text "Some orders"
+                | Some orders -> 
+                    let viewOrder (s: OrderWithStatus) =
+                        OrderList.OrderItem()
+                            .OrderCreatedTime(s.Order.CreatedTime.ToLongDateString())
+                            .OrderFormattedTotalPrice(s.Order.FormattedTotalPrice)
+                            .OrderOrderId(s.Order.OrderId.ToString())
+                            .OrderPizzasCount(s.Order.Pizzas.Length.ToString())
+                            .StatusText(s.StatusText)
+                            .Elt()
+                    OrderList().Items(forEach orders viewOrder).Elt()
         ]
     ]
-//    <div class="main">
-//    @if (ordersWithStatus == null)
-//    {
-//        <text>Loading...</text>
-//    }
-//    else if (ordersWithStatus.Count == 0)
-//    {
-//        <h2>No orders placed</h2>
-//        <a class="btn btn-success" href="">Order some pizza</a>
-//    }
-//    else
-//    {
-//        <text>TODO: show orders</text>
-//    }
-//</div>
