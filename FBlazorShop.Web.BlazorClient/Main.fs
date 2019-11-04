@@ -25,50 +25,44 @@ type Message =
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote () |> fst)
-| Home m ->Router.definePageModel m (Home.init remote |> fst)
+| Home m ->Router.definePageModel m (Home.init remote () |> fst)
 
 let router remote = Router.inferWithModel SetPage (fun (m : Model) -> m.Page) (defaultPageModel remote)
-//let initModel (remote : PizzaService) =
-//    let pizzaConfigModel , pizzaConfigCmd =  PizzaConfig.init remote ()
-//    let orderModel, orderCmd = Orders.init()
-//    let pizzaConfigCmd = Cmd.map  PizzaConfigMsg pizzaConfigCmd
-//    let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
-//    let cmd = Cmd.batch [ cmd ; pizzaConfigCmd; orderCmd]
-//    { specials = []; PizzaConfig = pizzaConfigModel; Order = orderModel; Page = Home }, cmd
 
-let init remote  = 
-    let homeModel, homeCmd = Home.init remote
-    let home = { Model = homeModel  } |> Home
-    {Page = home },  Cmd.map HomeMsg homeCmd
+let inline initPage init msg page =
+    let model, cmd = init ()
+    let page = { Model = model  } |> page
+    {Page = page }, Cmd.map msg cmd
 
-let update remote message (model : Model) =
+let initMyOrders remote = 
+    initPage (MyOrders.init remote) MyOrdersMsg MyOrders
+
+let initHome remote = 
+    initPage (Home.init remote) HomeMsg Home
+    
+let init remote () = initHome remote
+
+let update remote message (model : Model)  : Model * Cmd<_>=
     match message, model.Page with
-    | SetPage(Home _  ), _ -> init remote
-    | SetPage(MyOrders _ as page),_ -> { model with Page = page }, Cmd.none
-    | HomeMsg msg, Home homeModel ->
-        let homeModel, cmd = Home.update remote msg homeModel.Model
-        {model with Page = Home({ Model = homeModel})}, Cmd.map HomeMsg cmd
+    | SetPage(Home _  ), _ -> initHome remote
+    | SetPage(MyOrders _),_ -> initMyOrders remote
+
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         let myOrdersModel, cmd = MyOrders.update  msg myOrdersModel.Model
         {model with Page = MyOrders({ Model = myOrdersModel})}, Cmd.map HomeMsg cmd
+  
+    | HomeMsg (Home.Message.OrderMsg (OrderAccepted _)),_  -> 
+        let orderModel = MyOrders.init remote () |> fst
+        let init = { Model = orderModel } 
+        model, init |> MyOrders |> SetPage |> Cmd.ofMsg
+
+    | HomeMsg msg, Home homeModel ->
+        let homeModel, cmd = Home.update remote msg homeModel.Model
+        {model with Page = Home({ Model = homeModel})}, Cmd.map HomeMsg cmd
+ 
     | _ -> failwith "not supported"
-    //| SpecialsReceived d -> { model with specials = d }, Cmd.none
-    //| PizzaConfigMsg (ConfigDone p ) ->  model, Cmd.ofMsg (p |> PizzaAdded |> OrderMsg)
-    //| PizzaConfigMsg msg -> 
-    //    let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
-    //    {model with PizzaConfig = pizzaConfigModel}, Cmd.map PizzaConfigMsg cmd
-    //| OrderMsg (OrderAccepted _) -> 
-    //    let cmd = MyOrders.init remote () |> snd
-    //    let init = { Model = {MyOrders = None } } : PageModel<MyOrders.Model>
-    //    model, init |> MyOrders |> SetPage |> Cmd.ofMsg
-    //| OrderMsg msg ->
-    //    let orderModel, cmd =  Orders.update remote model.Order msg
-        //{model with Order = orderModel}, Cmd.map OrderMsg cmd
-    //| MyOrderMsg msg ->
-    //    let orderModel, cmd = MyOrders.update msg model.Order 
-    //    {model with Page = MyOrders ( model.Page.)}, Cmd.map MyOrderMsg cmd
+
         
-    
 open Bolero.Html
 open BoleroHelpers
 
@@ -107,7 +101,7 @@ type MyApp() =
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update remote
-        Program.mkProgram (fun _ -> init remote ) update view
+        Program.mkProgram (fun _ -> init remote () ) update view
         |> Program.withRouter (router remote)
 #if DEBUG
 
@@ -116,8 +110,3 @@ type MyApp() =
         |> Program.withHotReload
 #endif
 
-//type MyComponent() =
-//    inherit Component()
-
-//    override this.BuildRenderTree(builder) =
-//        builder.OpenComponent<Router>(0)

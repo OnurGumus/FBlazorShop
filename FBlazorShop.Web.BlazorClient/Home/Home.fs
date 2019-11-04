@@ -19,7 +19,7 @@ type Message =
 
 open Elmish
 
-let init (remote: PizzaService) =
+let init (remote: PizzaService) () =
     let pizzaConfigModel, pizzaConfigCmd = PizzaConfig.init remote ()
     let orderModel, orderCmd = Orders.init()
     let pizzaConfigCmd = Cmd.map PizzaConfigMsg pizzaConfigCmd
