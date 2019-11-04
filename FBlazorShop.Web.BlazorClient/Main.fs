@@ -12,6 +12,7 @@ open Bolero
 
 type Page =
     | [<EndPoint "/">] Home   of Model : PageModel<Home.Model>                  
+    | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
 
 type Model = { 
@@ -22,10 +23,12 @@ type Message =
     | SetPage of Page
     | HomeMsg of Home.Message
     | MyOrdersMsg of MyOrders.Message
+    | OrderDetailMsg of OrderDetail.Message
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
+| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init remote key |> fst)
 
 let router remote = Router.inferWithModel SetPage (fun (m : Model) -> m.Page) (defaultPageModel remote)
 
@@ -33,6 +36,9 @@ let inline initPage init msg page =
     let model, cmd = init 
     let page = { Model = model  } |> page
     {Page = page }, Cmd.map msg cmd
+
+let initOrderDetail remote key = 
+    initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
 
 let initMyOrders remote = 
     initPage (MyOrders.init remote) MyOrdersMsg MyOrders
@@ -52,6 +58,7 @@ let update remote message (model : Model)  : Model * Cmd<_>=
     match message, model.Page with
     | SetPage(Home _  ), _ -> initHome remote
     | SetPage(MyOrders _),_ -> initMyOrders remote
+    | SetPage(OrderDetail (key,_)),_ -> initOrderDetail remote key 
 
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
@@ -63,8 +70,10 @@ let update remote message (model : Model)  : Model * Cmd<_>=
 
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
- 
-    | _ -> failwith "not supported"
+    | OrderDetailMsg msg, OrderDetail(key, orderModel) ->
+        genericUpdate (OrderDetail.update)(orderModel.Model) msg OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
+        
+    | _ -> failwith "not supported" 
 
         
 open Bolero.Html
@@ -79,6 +88,7 @@ let view ( model : Model) dispatch =
         | Home (model) ->
           Home.view model.Model (HomeMsg >> dispatch)
         | MyOrders model -> MyOrders.view model.Model (MyOrdersMsg >> dispatch)
+        | OrderDetail(_ ,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
     
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
