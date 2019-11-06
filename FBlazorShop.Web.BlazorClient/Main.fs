@@ -2,16 +2,14 @@
 
 open Microsoft.AspNetCore.Components.Routing
 open Microsoft.JSInterop
-open FBlazorShop.App.Model
 open Bolero.Remoting
 open Elmish
 open Services
-open PizzaConfig
 open Orders
 open Bolero
 
 type Page =
-    | [<EndPoint "/">] Home   of Model : PageModel<Home.Model>                  
+    | [<EndPoint "/">] Home of Model : PageModel<Home.Model>                  
     | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
 
@@ -30,11 +28,11 @@ let defaultPageModel remote = function
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
 | OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init remote key |> fst)
 
-let router remote = Router.inferWithModel SetPage (fun (m : Model) -> m.Page) (defaultPageModel remote)
+let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote)
 
-let inline initPage init msg page =
+let initPage init msg page =
     let model, cmd = init 
-    let page = { Model = model  } |> page
+    let page = { Model = model } |> page
     {Page = page }, Cmd.map msg cmd
 
 let initOrderDetail remote key = 
@@ -46,7 +44,6 @@ let initMyOrders remote =
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
-
 let init remote = initHome remote
  
 let update remote message (model : Model)  : Model * Cmd<_>=
@@ -56,9 +53,9 @@ let update remote message (model : Model)  : Model * Cmd<_>=
         {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
 
     match message, model.Page with
-    | SetPage(Home _  ), _ -> initHome remote
-    | SetPage(MyOrders _),_ -> initMyOrders remote
-    | SetPage(OrderDetail (key,_)),_ -> initOrderDetail remote key 
+    | SetPage(Home _), _ -> initHome remote
+    | SetPage(MyOrders _), _ -> initMyOrders remote
+    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key 
 
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
@@ -70,9 +67,11 @@ let update remote message (model : Model)  : Model * Cmd<_>=
 
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
+
     | OrderDetailMsg(OrderDetail.Message.OrderLoaded _), page 
         when (page |> function | OrderDetail _ -> false | _ -> true) -> 
         model, Cmd.none
+
     | OrderDetailMsg msg, OrderDetail(key, orderModel) ->
         genericUpdate 
             (OrderDetail.update remote)
@@ -88,7 +87,6 @@ open Bolero.Html
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
-
 
 let view ( model : Model) dispatch =
     let content =
@@ -116,7 +114,6 @@ let view ( model : Model) dispatch =
 
 open Bolero.Templating.Client
 
-
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
@@ -126,7 +123,6 @@ type MyApp() =
         Program.mkProgram (fun _ -> init remote) update view
         |> Program.withRouter (router remote)
 #if DEBUG
-
         |> Program.withConsoleTrace
         |> Program.withErrorHandler (printf "%A")
         |> Program.withHotReload

@@ -9,29 +9,7 @@
     </div>
     <div class="track-order-body">
         <div class="track-order-details">
-            ${PizzaItems}
-            <template id="PizzaItem">
-                <p>
-                    <strong>
-                        ${Size}"
-                        ${SpecialName}
-                        (£${FormattedTotalPrice})
-                    </strong>
-                </p>
-
-                <ul>
-                    ${ToppingItems}
-                    <template id="ToppingItem">
-                        <li>+ ${ToppingName}</li>
-                    </template>
-                </ul>
-            </template>
-            <p>
-                <strong>
-                    Total price:
-                    £(${FormattedTotalPrice})
-                </strong>
-            </p>
+            ${OrderReview}
         </div>
     </div>
 </div>
