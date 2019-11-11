@@ -17,6 +17,7 @@ let update message model =
     match message with
     | OrdersLoaded orders -> { MyOrders = Some orders }, Cmd.none
 
+
 open Bolero.Html
 type OrderList = Template<"wwwroot\MyOrders.html">
 

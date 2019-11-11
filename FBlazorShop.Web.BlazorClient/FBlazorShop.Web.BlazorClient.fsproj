@@ -10,8 +10,8 @@
   <ItemGroup>
     <Compile Include="BoleroHelpers.fs" />
     <Compile Include="Services.fs" />
-    <Compile Include="Checkout.fs" />
     <Compile Include="OrderReviewView.fs" />
+    <Compile Include="Checkout.fs" />
     <Compile Include="OrderDetail.fs" />
     <Compile Include="MyOrders.fs" />
     <Compile Include="Home\PizzaConfig.fs" />

@@ -12,8 +12,7 @@ type Model = { Order : Order option; }
 type OrderMsg = 
     | PizzaAdded of Pizza
     | PizzaRemoved of Pizza
-    | OrderPlaced of Order
-    | OrderAccepted of int
+    | CheckoutRequested of Order
 
 let init () = 
     { Order = None; }, Cmd.none
@@ -42,10 +41,7 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
         let order =
                 { state.Order.Value with Pizzas = pizzas}
         { state with Order = Some order}, Cmd.none
-    | OrderPlaced o -> 
-        let cmd = Cmd.ofAsync remote.placeOrder o OrderAccepted raise
-        state, cmd
-    | _ -> state, Cmd.none
+    | CheckoutRequested _ -> invalidOp "should not happen"
 
 let view (state : Model) dispatcher =
     let noOrder = 
@@ -83,7 +79,7 @@ let view (state : Model) dispatcher =
             div [attr.``class`` "order-total" ][
                 text "Total:"
                 span [attr.``class`` "total-price"] [text (order.FormattedTotalPrice)]
-                button [attr.``class`` "btn btn-warning"; on.click (fun _ -> order |> OrderPlaced |> dispatcher)][ text "Order >"]
+                button [attr.``class`` "btn btn-warning"; on.click (fun _ -> order |> CheckoutRequested |> dispatcher)][ text "Order >"]
             ]
         | _ -> empty
 
