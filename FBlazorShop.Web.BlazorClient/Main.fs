@@ -37,7 +37,6 @@ let initPage init msg page =
     let page = { Model = model } |> page
     {Page = page }, Cmd.map msg cmd
     
-
 let initOrderDetail remote key = 
     initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
 
@@ -46,6 +45,7 @@ let initMyOrders remote =
 
 let initCheckout remote order = 
     initPage (Checkout.init remote order) CheckoutMsg Checkout
+
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
@@ -76,6 +76,17 @@ let update remote message (model : Model)  : Model * Cmd<_>=
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
 
+        
+    | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
+        let orderModel = OrderDetail.init remote o |> fst
+        let init = { Model = orderModel } 
+        model, (o,init) |> OrderDetail |> SetPage |> Cmd.ofMsg
+
+    | CheckoutMsg msg, Checkout model ->
+         genericUpdate (Checkout.update remote)(model.Model) msg CheckoutMsg Checkout
+
+
+
     | OrderDetailMsg(OrderDetail.Message.OrderLoaded _), page 
         when (page |> function | OrderDetail _ -> false | _ -> true) -> 
         model, Cmd.none
@@ -89,7 +100,6 @@ let update remote message (model : Model)  : Model * Cmd<_>=
             (fun pageModel -> OrderDetail(key, pageModel))
         
     | _ -> failwith "not supported" 
-
         
 open Bolero.Html
 open BoleroHelpers
@@ -134,6 +144,6 @@ type MyApp() =
 #if DEBUG
         |> Program.withConsoleTrace
         |> Program.withErrorHandler (printf "%A")
-        |> Program.withHotReload
+     //   |> Program.withHotReload
 #endif
 

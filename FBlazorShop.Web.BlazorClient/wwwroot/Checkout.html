@@ -1,12 +1,60 @@
 ﻿<div class="main">
-    <div class="checkout-cols">
-        <div class="checkout-order-details">
-            <h4>Review order</h4>
-            ${OrderReview}
-        </div>
-    </div>
+   <!-- <form>-->
 
-    <button class="checkout-button btn btn-warning" onclick="${PlaceOrder}">
-        Place order
-    </button>
+        <div class="checkout-cols">
+            <div class="checkout-order-details">
+                <h4>Review order</h4>
+                ${OrderReview}
+            </div>
+            <div class="checkout-delivery-address">
+                <h4>Deliver to...</h4>
+                <div class="form-field">
+                    <label>Name:</label>
+                    <div>
+                        <input @bind="Address.Name" />
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Line 1:</label>
+                    <div>
+                        <input @bind="Address.Line1" />
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Line 2:</label>
+                    <div>
+                        <input @bind="Address.Line2" />
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>City:</label>
+                    <div>
+                        <input @bind="Address.City" />
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Region:</label>
+                    <div>
+                        <input @bind="Address.Region" />
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Postal code:</label>
+                    <div>
+                        <input @bind="Address.PostalCode" />
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <button class="checkout-button btn btn-warning" onclick="${PlaceOrder}">
+            Place order
+        </button>
+    <!--</form>-->
 </div>
