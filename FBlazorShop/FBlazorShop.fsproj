@@ -6,7 +6,6 @@
   <ItemGroup>
     <Compile Include="OrderService.fs" />
     <Compile Include="Extensions.fs" />
-    <Compile Include="Library.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />

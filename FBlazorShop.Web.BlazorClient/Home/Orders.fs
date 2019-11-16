@@ -28,7 +28,7 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
                     OrderId = 0
                     UserId = ""
                     CreatedTime = System.DateTime.Now
-                    DeliveryAddress = Unchecked.defaultof<_>
+                    DeliveryAddress = { Id = 1; Name =""; Line1 =""; Line2 = ""; City =""; Region = ""; PostalCode ="" } 
                     DeliveryLocation = { Latitude = 51.5001 ; Longitude = -0.1239}
                     Pizzas = [p]
                 } |> Some

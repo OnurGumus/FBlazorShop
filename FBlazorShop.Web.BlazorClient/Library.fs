@@ -227,6 +227,7 @@ type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
     override this.Program =
+        
         Program.mkProgram (fun _ -> initModel(), []) update (view this.JSRuntime)
         //|> Program.withConsoleTrace
         |> Program.withErrorHandler (fun (msg, exn) -> printfn "%s: %A" msg exn)

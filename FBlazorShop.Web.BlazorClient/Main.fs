@@ -9,6 +9,7 @@ open Orders
 open Bolero
 
 type Page =
+    | Start
     | [<EndPoint "/">] Home of Model : PageModel<Home.Model>                  
     | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
@@ -29,7 +30,7 @@ let defaultPageModel remote = function
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
 | OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init remote key |> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
-
+| Start -> ()
 let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote)
 
 let initPage init msg page =
@@ -49,7 +50,7 @@ let initCheckout remote order =
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
-let init remote =  initHome remote
+let init = { Page = Start}, Cmd.none
  
 let update remote message (model : Model)  : Model * Cmd<_>=
     
@@ -58,7 +59,6 @@ let update remote message (model : Model)  : Model * Cmd<_>=
         {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
 
     match message, model.Page with
-    | SetPage p1, p2 when p1 = p2 -> model, Cmd.none
     | SetPage(Home _), _ -> initHome remote
     | SetPage(MyOrders _), _ -> initMyOrders remote
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key 
@@ -75,7 +75,6 @@ let update remote message (model : Model)  : Model * Cmd<_>=
 
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
-
         
     | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
         let orderModel = OrderDetail.init remote o |> fst
@@ -84,8 +83,6 @@ let update remote message (model : Model)  : Model * Cmd<_>=
 
     | CheckoutMsg msg, Checkout model ->
          genericUpdate (Checkout.update remote)(model.Model) msg CheckoutMsg Checkout
-
-
 
     | OrderDetailMsg(OrderDetail.Message.OrderLoaded _), page 
         when (page |> function | OrderDetail _ -> false | _ -> true) -> 
@@ -99,14 +96,14 @@ let update remote message (model : Model)  : Model * Cmd<_>=
             OrderDetailMsg 
             (fun pageModel -> OrderDetail(key, pageModel))
         
-    | _ -> failwith "not supported" 
+    | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
 open Bolero.Html
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
 
-let view ( model : Model) dispatch =
+let view  ( model : Model) dispatch =
     let content =
         cond model.Page <| function
         | Home (model) ->
@@ -114,7 +111,7 @@ let view ( model : Model) dispatch =
         | MyOrders model -> MyOrders.view model.Model (MyOrdersMsg >> dispatch)
         | OrderDetail(_ ,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
         | Checkout m -> Checkout.view m.Model (CheckoutMsg >> dispatch)
-    
+        | Start -> text "Loading ..."
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href "/"; attr.``class`` "nav-tab"] 
@@ -131,19 +128,30 @@ let view ( model : Model) dispatch =
         .Body(content)
         .Elt()
 
-open Bolero.Templating.Client
 
+open Bolero.Templating.Client
+open System
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
 
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update remote
-        Program.mkProgram (fun _ -> init remote) update view
-        |> Program.withRouter (router remote)
+        let router = router remote
+        Program.mkProgram (fun _ -> init) update view
+        |> Program.withRouter router
 #if DEBUG
         |> Program.withConsoleTrace
-        |> Program.withErrorHandler (printf "%A")
-     //   |> Program.withHotReload
+        |> Program.withErrorHandler (Console.WriteLine)
+        //|> Program.withHotReload
 #endif
 
+open Microsoft.AspNetCore.Components.Builder
+open Microsoft.Extensions.DependencyInjection
+open Bolero.Remoting.Client
+type Startup() =
+    member __.ConfigureServices(services: IServiceCollection) =
+        services.AddRemoting()
+
+    member __.Configure(app: IComponentsApplicationBuilder) =
+        app.AddComponent<MyApp>("app")

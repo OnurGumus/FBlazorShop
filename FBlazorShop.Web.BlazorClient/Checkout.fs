@@ -20,6 +20,7 @@ let init (remote : PizzaService) (order : Order option)  =
 let update remote message (model : Model) = 
     match message with
    // | OrderLoaded (_, order) -> { Order =  order }, Cmd.none
+   
     | OrderPlaced o -> 
         let cmd = Cmd.ofAsync remote.placeOrder o OrderAccepted raise
         model, cmd

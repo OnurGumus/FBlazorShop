@@ -10,9 +10,10 @@ open FBlazorShop.EF
 open Bolero.Templating.Server
 open Bolero.Remoting.Server
 open FBlazorShop
+open Blazor
+open Blazor.Extensions
 type Startup() =
     member _.ConfigureServices(services: IServiceCollection) =
-
         services
         #if DEBUG
             .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient")
@@ -21,9 +22,10 @@ type Startup() =
             .AddEF("Data Source=pizza.db") 
             .SetupServices()
             .AddMvc()
+            
             .AddRazorRuntimeCompilation() |> ignore
            
-        services.AddServerSideBlazor()|> ignore
+       // services.AddServerSideBlazor()|> ignore
 
         
 
@@ -32,13 +34,14 @@ type Startup() =
 
         if env.IsDevelopment() then
             app.UseDeveloperExceptionPage() |> ignore
-
+        app.UseBlazorDebugging()
         app
             .UseRemoting()
             .UseRouting()
+            .UseClientSideBlazorFiles<FBlazorShop.Web.BlazorClient.Main.Startup>()
             .UseStaticFiles() 
             .UseEndpoints(fun endpoints ->
-                endpoints.MapBlazorHub() |> ignore
+               // endpoints.MapBlazorHub() |> ignore
 #if DEBUG
                 endpoints.UseHotReload()
 #endif

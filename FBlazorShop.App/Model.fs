@@ -83,6 +83,14 @@ with
     member this.TotalPrice = this.Pizzas.Sum(fun p -> p.TotalPrice)
     member this.FormattedTotalPrice =  this.TotalPrice.ToString("0.00")
 
+type OrderLight = {
+    OrderId : int
+    Pizzas : Pizza list
+    UserId : string
+    CreatedTime : DateTime
+    DeliveryAddress : Address
+
+}
 type Marker = {
     Description : string
     X: double
@@ -114,7 +122,7 @@ with
             Longitude = order.DeliveryLocation.Longitude + (offset |> snd)} : LatLong
 
     static member FromOrder (order : Order) =
-        let dispatchTime = order.CreatedTime.Add(OrderWithStatus.PreparationDuration);
+        let dispatchTime = order.CreatedTime.Add(OrderWithStatus.PreparationDuration).ToLocalTime();
         let statusText, mapMarkers =
             if DateTime.Now < dispatchTime then
                 "Preparing", [OrderWithStatus.ToMapMarker "You" order.DeliveryLocation true]

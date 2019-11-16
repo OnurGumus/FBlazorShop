@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Shared\" />
+    <Folder Include="wwwroot\_content\FBlazorShop.Web.BlazorClient\" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
