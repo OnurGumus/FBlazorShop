@@ -7,6 +7,9 @@
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
     <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>WASM</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="Services.fs" />
     <Compile Include="Startup.fs" />

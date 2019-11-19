@@ -24,9 +24,9 @@ type Startup() =
             .AddMvc()
             
             .AddRazorRuntimeCompilation() |> ignore
-           
-       // services.AddServerSideBlazor()|> ignore
-
+        #if !WASM           
+        services.AddServerSideBlazor()|> ignore
+        #endif
         
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -34,16 +34,22 @@ type Startup() =
 
         if env.IsDevelopment() then
             app.UseDeveloperExceptionPage() |> ignore
+        #if DEBUG
         app.UseBlazorDebugging()
+        #endif
         app
             .UseRemoting()
             .UseRouting()
+        #if WASM
             .UseClientSideBlazorFiles<FBlazorShop.Web.BlazorClient.Main.Startup>()
+        #endif
             .UseStaticFiles() 
             .UseEndpoints(fun endpoints ->
-               // endpoints.MapBlazorHub() |> ignore
+#if !WASM
+                endpoints.MapBlazorHub() |> ignore
+#endif
+                endpoints.MapFallbackToPage("/_Host") |> ignore
 #if DEBUG
                 endpoints.UseHotReload()
 #endif
-                endpoints.MapFallbackToPage("/_Host") |> ignore
             ) |> ignore
