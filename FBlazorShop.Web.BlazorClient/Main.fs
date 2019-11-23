@@ -143,7 +143,7 @@ type MyApp() =
 #if DEBUG
         |> Program.withConsoleTrace
         |> Program.withErrorHandler (Console.WriteLine)
-        //|> Program.withHotReload
+        |> Program.withHotReload
 #endif
 
 open Microsoft.AspNetCore.Components.Builder

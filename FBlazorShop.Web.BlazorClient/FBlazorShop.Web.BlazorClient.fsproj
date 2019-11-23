@@ -5,7 +5,7 @@
     <RazorLangVersion>3.0</RazorLangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Content Remove="wwwroot\ConfigurePizza.html~RF506bf3.TMP" />
+    <Content Remove="wwwroot\*.TMP" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoleroHelpers.fs" />

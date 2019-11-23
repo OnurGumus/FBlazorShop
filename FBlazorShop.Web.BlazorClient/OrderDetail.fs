@@ -17,13 +17,14 @@ let loadPeriodically remote id =
             do! Async.Sleep 4000; 
             return! remote.getOrderWithStatus i 
     }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) raise
+    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun m -> OrderLoaded(id,None))
 
 let init (remote : PizzaService) id  =
     { Order = None } , Cmd.ofAsync remote.getOrderWithStatus id (fun m -> OrderLoaded(id,m)) raise
 
 let update remote message (model : Model) = 
     match message with
+    | OrderLoaded (id , None) -> model,Cmd.none
     | OrderLoaded (id, order) -> { Order =  order }, loadPeriodically remote id
 
 open Bolero.Html
