@@ -1,6 +1,4 @@
 ﻿<div class="main">
-    <!-- <form>-->
-
     <div class="checkout-cols">
         <div class="checkout-order-details">
             <h4>Review order</h4>
@@ -8,49 +6,59 @@
         </div>
 
         <div class="checkout-delivery-address">
-            
+
             <h4>Deliver to...</h4>
-            <div class="form-field">
-                <label>Name:</label>
-                <div>
-                    <input @bind="Address.Name" />
+            ${FormFieldItems}
+            <template id="FormFieldItem">
+                <div class="form-field">
+                    <label>${Label}:</label>
+                    <div>
+                        <input class="${ValidClass}" bind="${Value}" />
+                        <div class="validation-message">&nbsp; ${Error}</div>
+                    </div>
                 </div>
-            </div>
+            </template>
 
-            <div class="form-field">
-                <label>Line 1:</label>
-                <div>
-                    <input @bind="Address.Line1" />
-                </div>
-            </div>
 
-            <div class="form-field">
-                <label>Line 2:</label>
-                <div>
-                    <input @bind="Address.Line2" />
-                </div>
-            </div>
+            <!--<div class="form-field">
+        <label>Line 1:</label>
+        <div>
+            <input  class="${AddressLine1Valid}" bind="${AddressLine1}" />
+            <div class="validation-message">&nbsp; ${AddressLine1Error}</div>
+        </div>
+    </div>
 
-            <div class="form-field">
-                <label>City:</label>
-                <div>
-                    <input @bind="Address.City" />
-                </div>
-            </div>
+    <div class="form-field">
+        <label>Line 2:</label>
+        <div>
+            <input  class="${AddressLine2Valid}" bind="${AddressLine2}" />
+            <div class="validation-message">&nbsp; ${AddressLine2Error}</div>
+        </div>
+    </div>
 
-            <div class="form-field">
-                <label>Region:</label>
-                <div>
-                    <input @bind="Address.Region" />
-                </div>
-            </div>
+    <div class="form-field">
+        <label>City:</label>
+        <div>
+            <input  class="${AddressCityValid}" bind="${AddressCity}" />
+            <div  class="validation-message">&nbsp; ${AddressCityError}</div>
+        </div>
+    </div>
 
-            <div class="form-field">
-                <label>Postal code:</label>
-                <div>
-                    <input @bind="Address.PostalCode" />
-                </div>
-            </div>
+    <div class="form-field">
+        <label>Region:</label>
+        <div>
+            <input  class="${AddressRegionValid}" bind="${AddressRegion}" />
+            <div class="validation-message">&nbsp; ${AddressRegionError}</div>
+        </div>
+    </div>
+
+    <div class="form-field">
+        <label>Postal code:</label>
+        <div>
+            <input  class="${AddressPostalCodeValid}" bind="${AddressPostalCode}" />
+            <div class="validation-message">&nbsp; ${AddressPostalCodeError}</div>
+        </div>
+    </div>-->
 
         </div>
     </div>
@@ -58,5 +66,4 @@
     <button class="checkout-button btn btn-warning" onclick="${PlaceOrder}">
         Place order
     </button>
-    <!--</form>-->
 </div>

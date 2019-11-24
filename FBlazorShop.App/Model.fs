@@ -4,6 +4,7 @@ open System.Collections.Generic
 open System.Linq
 open System
 
+
 /// <summary>
 /// Represents a pre-configured template for a pizza a user can order
 /// </summary>
@@ -59,7 +60,16 @@ type Address ={
     Region : string
     PostalCode : string
 }
-
+with
+    static member Default = { 
+        Id = 0
+        Name = "" 
+        Line1 = ""
+        Line2 = ""
+        City = ""
+        Region = ""
+        PostalCode = ""
+    }
 [<CLIMutable>]
 type LatLong = {
     Latitude : double

@@ -23,6 +23,8 @@ NUGET
       TaskBuilder.fs (>= 2.1)
     Elmish (2.0.3)
       FSharp.Core (>= 4.5.2)
+    Fable.Validation (0.2.1)
+      FSharp.Core (>= 4.2.3)
     FSharp.Core (4.7)
     HtmlAgilityPack (1.11.16)
       System.Net.Http (>= 4.3.2)

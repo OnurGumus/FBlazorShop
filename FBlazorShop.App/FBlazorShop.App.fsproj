@@ -2,11 +2,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Model.fs" />
     <Compile Include="IOrderService.fs" />
     <Compile Include="IReadOnlyRepo.fs" />
+    <Compile Include="Domain.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />

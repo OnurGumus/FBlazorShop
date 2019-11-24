@@ -4,3 +4,4 @@ Bolero.HotReload
 #Microsoft.AspNetCore.Blazor.Build
 #Bolero.Build
 Microsoft.AspNetCore.Blazor.DevServer
+Fable.Validation
