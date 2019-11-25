@@ -127,9 +127,6 @@ open BoleroHelpers
 type MainLayout = Template<"wwwroot\MainLayout.html">
 
 let view  (js: IJSRuntime) ( model : Model) dispatch =
-    //if (model.Rendered) then 
-    //    js.InvokeAsync<string>("window.localStorage.getItem", "name").Result |> System.Console.WriteLine
-
     let content =
         cond model.Page <| function
         | Home (model) ->
@@ -143,7 +140,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
             [attr.href "/"; attr.``class`` "nav-tab"] 
             [
                 img [attr.src ("img/pizza-slice.svg" |> prependContent)] 
-                div [] [text "Get Pizza"]
+                div [] [text (model.Token |> function | Some x -> x | _ -> "empty")]
             ])
         .MyOrders(navLink NavLinkMatch.All 
             [attr.href "myOrders"; attr.``class`` "nav-tab"] 
@@ -159,25 +156,13 @@ open Bolero.Templating.Client
 
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
-    let  mutable HitCount = 0
-    let dispatch = 
-        typeof<MyApp>
-            .GetProperty("Dispatch", Reflection.BindingFlags.Instance ||| Reflection.BindingFlags.NonPublic)
-
-    override this.OnAfterRenderAsync(firstRender) =
-        HitCount <- HitCount + 1
-        let res = base.OnAfterRenderAsync(firstRender)
-        let d : (Message -> unit) = downcast dispatch.GetValue(this)
-        if HitCount = 2 then
-           Rendered |> d |> ignore
-        res
-
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update  remote (this.JSRuntime)
         let router = router remote
         Program.mkProgram (fun _ -> init) (update) (view  this.JSRuntime) 
         |> Program.withRouter router
+        |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
         |> Program.withConsoleTrace
         |> Program.withErrorHandler 
