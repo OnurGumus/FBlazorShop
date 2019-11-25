@@ -16,6 +16,8 @@ type Page =
     | [<EndPoint "/checkout">] Checkout of Model : PageModel<Checkout.Model>
 type Model = { 
     Page : Page
+    Rendered : bool
+    Token : string option
 }
 
 type Message = 
@@ -24,6 +26,10 @@ type Message =
     | MyOrdersMsg of MyOrders.Message
     | OrderDetailMsg of OrderDetail.Message
     | CheckoutMsg of Checkout.Message
+    | Rendered
+    | TokenRead of string
+    | TokenNotFound
+    | TokenSaved
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
@@ -36,7 +42,7 @@ let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPage
 let initPage init msg page =
     let model, cmd = init 
     let page = { Model = model } |> page
-    {Page = page }, Cmd.map msg cmd
+    {Page = page ; Rendered = false; Token = None}, Cmd.map msg cmd
     
 let initOrderDetail remote key = 
     initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
@@ -50,21 +56,38 @@ let initCheckout remote order =
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
-let init = { Page = Start}, Cmd.none
+let init = { Page = Start; Rendered = false; Token = None}, Cmd.none
  
-let update remote message (model : Model)  : Model * Cmd<_>=
-    
+ 
+let getToken (jsRuntime : IJSRuntime)  =
+    let doWork () = 
+        async{ 
+            System.Console.WriteLine("too");
+            let! res = 
+                jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "name")
+                    .AsTask() 
+                    |> Async.AwaitTask
+            return
+                match res with
+                | null -> TokenNotFound
+                | t -> TokenRead t
+        }
+    Cmd.ofAsync doWork () id raise
+
+let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * Cmd<_>=
     let genericUpdate update subModel msg  msgFn pageFn =
         let subModel, cmd = update  msg subModel
         {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
 
     match message, model.Page with
-    | SetPage(Home _), _ -> initHome remote
+    | Rendered, _ -> { model with Rendered = true}, getToken jsRuntime
+    | SetPage(Home _), _ -> initHome remote 
     | SetPage(MyOrders _), _ -> initMyOrders remote
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key 
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote m.Model.Order 
-
+    | TokenRead t , _ ->  { model with Token = Some t }, Cmd.none
+    | TokenNotFound , _ -> model, Cmd.none
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
    
@@ -103,7 +126,10 @@ open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
 
-let view  ( model : Model) dispatch =
+let view  (js: IJSRuntime) ( model : Model) dispatch =
+    //if (model.Rendered) then 
+    //    js.InvokeAsync<string>("window.localStorage.getItem", "name").Result |> System.Console.WriteLine
+
     let content =
         cond model.Page <| function
         | Home (model) ->
@@ -128,22 +154,37 @@ let view  ( model : Model) dispatch =
         .Body(content)
         .Elt()
 
-
-open Bolero.Templating.Client
 open System
+open Bolero.Templating.Client
+
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
+    let  mutable HitCount = 0
+    let dispatch = 
+        typeof<MyApp>
+            .GetProperty("Dispatch", Reflection.BindingFlags.Instance ||| Reflection.BindingFlags.NonPublic)
+
+    override this.OnAfterRenderAsync(firstRender) =
+        HitCount <- HitCount + 1
+        let res = base.OnAfterRenderAsync(firstRender)
+        let d : (Message -> unit) = downcast dispatch.GetValue(this)
+        if HitCount = 2 then
+           Rendered |> d |> ignore
+        res
 
     override this.Program =
         let remote = this.Remote<PizzaService>()
-        let update = update remote
+        let update = update  remote (this.JSRuntime)
         let router = router remote
-        Program.mkProgram (fun _ -> init) update view
+        Program.mkProgram (fun _ -> init) (update) (view  this.JSRuntime) 
         |> Program.withRouter router
 #if DEBUG
         |> Program.withConsoleTrace
-        |> Program.withErrorHandler (Console.WriteLine)
-        |> Program.withHotReload
+        |> Program.withErrorHandler 
+            (fun (x,y) -> 
+                Console.WriteLine("Error Message:" + x)
+                Console.WriteLine("Exception:" + y.ToString()))
+  //      |> Program.withHotReload
 #endif
 
 open Microsoft.AspNetCore.Components.Builder

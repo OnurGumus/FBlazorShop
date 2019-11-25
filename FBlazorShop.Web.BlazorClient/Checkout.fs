@@ -12,7 +12,7 @@ type Model = {
     ValidatedAddress : Result<Address,Map<string,string list>> option 
 }
 
-open Fable.Validation.Core
+open Validation
 
 let validateAddress (address : Address) =
     let cannotBeBlank (validator:Validator<string>) name value =

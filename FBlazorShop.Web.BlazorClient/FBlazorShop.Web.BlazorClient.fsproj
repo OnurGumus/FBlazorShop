@@ -5,10 +5,17 @@
     <RazorLangVersion>3.0</RazorLangVersion>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;WASM</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>TRACE;WASM</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Content Remove="wwwroot\*.TMP" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Validation.fs" />
     <Compile Include="BoleroHelpers.fs" />
     <Compile Include="Services.fs" />
     <Compile Include="OrderReviewView.fs" />
