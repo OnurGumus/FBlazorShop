@@ -11,7 +11,7 @@ type Model = { Order : Order option; }
 
 type OrderMsg = 
     | PizzaAdded of Pizza
-    | PizzaRemoved of Pizza
+    | PizzaRemoved of int
     | CheckoutRequested of Order
 
 let init () = 
@@ -28,13 +28,18 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
                     OrderId = 0
                     UserId = ""
                     CreatedTime = System.DateTime.Now
-                    DeliveryAddress = { Id = 1; Name =""; Line1 =""; Line2 = ""; City =""; Region = ""; PostalCode ="" } 
+                    DeliveryAddress = Address.Default
                     DeliveryLocation = { Latitude = 51.5001 ; Longitude = -0.1239}
                     Pizzas = [p]
                 } |> Some
         { Order = order }, Cmd.none
     | PizzaRemoved tobeRemoved -> 
-        let pizzas = [yield! state.Order.Value.Pizzas] |> List.filter (fun p -> p <> tobeRemoved)
+        let pizzas = 
+            [yield! state.Order.Value.Pizzas] 
+            |> List.indexed 
+            |> List.filter (fun (i,_) -> i <> tobeRemoved)  
+            |> List.map snd
+
         if pizzas.Length = 0 then
             {state with Order = None}, Cmd.none
         else
@@ -49,9 +54,9 @@ let view (state : Model) dispatcher =
             text "Choose a pizza"; br[]; text "to get started"
         ]
 
-    let cartItem (pizza : Pizza) =
+    let cartItem (index, pizza : Pizza) =
         div [attr.``class`` "cart-item"] [
-            a [on.click (fun _ ->   pizza |> PizzaRemoved |> dispatcher); attr.``class`` "delete-item"] [text "x"]
+            a [on.click (fun _ ->   index |> PizzaRemoved |> dispatcher); attr.``class`` "delete-item"] [text "x"]
             div [attr.``class`` "title"] [textf "%s\" %s" (pizza.Size.ToString()) pizza.Special.Name]
             ul [][
                 forEach pizza.Toppings (fun t -> li [] [textf "+%s" t.Topping.Name])
@@ -69,7 +74,7 @@ let view (state : Model) dispatcher =
             | _ -> 
                 div [attr.``class`` "order-contents"][
                     h2 [] [text "Your order"]
-                    forEach o.Pizzas cartItem 
+                    forEach (o.Pizzas |> Seq.indexed) cartItem 
                 ]
         | _ -> noOrder
 

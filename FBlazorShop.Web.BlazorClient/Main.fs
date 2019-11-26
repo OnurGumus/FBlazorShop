@@ -17,7 +17,7 @@ type Page =
 type Model = { 
     Page : Page
     Rendered : bool
-    Token : string option
+    State : Common.State
 }
 
 type Message = 
@@ -30,6 +30,9 @@ type Message =
     | TokenRead of string
     | TokenNotFound
     | TokenSaved
+    | SignInRequested
+    | SignOutRequested
+    | SignedOut
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
@@ -42,7 +45,7 @@ let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPage
 let initPage init msg page =
     let model, cmd = init 
     let page = { Model = model } |> page
-    {Page = page ; Rendered = false; Token = None}, Cmd.map msg cmd
+    {Page = page ; Rendered = false; State = {Authentication = None}}, Cmd.map msg cmd
     
 let initOrderDetail remote key = 
     initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
@@ -56,21 +59,31 @@ let initCheckout remote order =
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
-let init = { Page = Start; Rendered = false; Token = None}, Cmd.none
- 
+let init = { Page = Start; Rendered = false; State  = { Authentication = None}}, Cmd.none
  
 let getToken (jsRuntime : IJSRuntime)  =
     let doWork () = 
         async{ 
-            System.Console.WriteLine("too");
             let! res = 
                 jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "name")
                     .AsTask() 
                     |> Async.AwaitTask
+            
             return
                 match res with
                 | null -> TokenNotFound
                 | t -> TokenRead t
+        }
+    Cmd.ofAsync doWork () id raise
+
+let signOut (jsRuntime : IJSRuntime)  =
+    let doWork () = 
+        async{ 
+            do! 
+                jsRuntime.InvokeVoidAsync("window.localStorage.removeItem", "name")
+                    .AsTask() 
+                    |> Async.AwaitTask
+            return SignedOut
         }
     Cmd.ofAsync doWork () id raise
 
@@ -86,7 +99,16 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key 
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote m.Model.Order 
-    | TokenRead t , _ ->  { model with Token = Some t }, Cmd.none
+    | TokenRead t , _ ->  
+        { model with 
+            State = { 
+                Authentication = Some {  
+                    User = t; Token = t; TimeStamp = System.DateTime.Now 
+                }
+            } 
+        }, Cmd.none
+    | SignOutRequested, _ -> model , signOut jsRuntime
+    | SignedOut, _ -> { model with State = { Authentication = None}}, Cmd.none
     | TokenNotFound , _ -> model, Cmd.none
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
@@ -135,12 +157,28 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         | OrderDetail(_ ,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
         | Checkout m -> Checkout.view m.Model (CheckoutMsg >> dispatch)
         | Start -> text "Loading ..."
+    let loginDisplay =
+        cond model.State.Authentication <| function
+        | None -> 
+            a [attr.``class`` "sign-in"; 
+                on.click(fun _ -> SignInRequested |> dispatch)] 
+                [text "Sign in"] 
+        | Some {User = user} -> 
+            concat [
+                img [attr.src ("img/user.svg" |> prependContent)]
+                div [] [
+                    span [attr.``class`` "username"] [text user]
+                    a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
+                ]
+           ]
+        //<span class="username">@context.User.Identity.Name</span>
+        //<a class="sign-out" href="user/signout">Sign out</a>
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href "/"; attr.``class`` "nav-tab"] 
             [
                 img [attr.src ("img/pizza-slice.svg" |> prependContent)] 
-                div [] [text (model.Token |> function | Some x -> x | _ -> "empty")]
+                div [] [text "Get Pizza"]
             ])
         .MyOrders(navLink NavLinkMatch.All 
             [attr.href "myOrders"; attr.``class`` "nav-tab"] 
@@ -149,6 +187,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
                 div [] [text "My Orders"]
             ])
         .Body(content)
+        .LoginDisplay(loginDisplay)
         .Elt()
 
 open System
@@ -169,7 +208,7 @@ type MyApp() =
             (fun (x,y) -> 
                 Console.WriteLine("Error Message:" + x)
                 Console.WriteLine("Exception:" + y.ToString()))
-  //      |> Program.withHotReload
+        |> Program.withHotReload
 #endif
 
 open Microsoft.AspNetCore.Components.Builder

@@ -15,6 +15,7 @@
     <Content Remove="wwwroot\*.TMP" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common.fs" />
     <Compile Include="Validation.fs" />
     <Compile Include="BoleroHelpers.fs" />
     <Compile Include="Services.fs" />
