@@ -6,7 +6,7 @@ open System
 type Message =
     | AuthenticationRequested
 
-let authenticationRequested = Cmd.ofMsg AuthenticationRequested
+let authenticationRequested  = Cmd.ofMsg (AuthenticationRequested)
 
 type Authentication = {
     User : string;

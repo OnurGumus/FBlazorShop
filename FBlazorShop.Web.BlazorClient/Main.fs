@@ -14,13 +14,16 @@ type Page =
     | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
     | [<EndPoint "/checkout">] Checkout of Model : PageModel<Checkout.Model>
+
 type Model = { 
     Page : Page
     Rendered : bool
     State : Common.State
+    IsSigningIn : bool
+    BufferedCommand : Cmd<Message>
 }
 
-type Message = 
+and Message= 
     | SetPage of Page
     | HomeMsg of Home.Message
     | MyOrdersMsg of MyOrders.Message
@@ -33,6 +36,7 @@ type Message =
     | SignInRequested
     | SignOutRequested
     | SignedOut
+    | CommonMessage of Common.Message
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
@@ -45,7 +49,13 @@ let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPage
 let initPage init msg page =
     let model, cmd = init 
     let page = { Model = model } |> page
-    {Page = page ; Rendered = false; State = {Authentication = None}}, Cmd.map msg cmd
+    {
+        Page = page  
+        Rendered = false
+        State = {Authentication = None}
+        IsSigningIn = false
+        BufferedCommand = Cmd.none
+    }, Cmd.map msg cmd
     
 let initOrderDetail remote key = 
     initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
@@ -59,7 +69,13 @@ let initCheckout remote order =
 let initHome remote = 
     initPage (Home.init remote) HomeMsg Home
 
-let init = { Page = Start; Rendered = false; State  = { Authentication = None}}, Cmd.none
+let init = 
+    {   Page = Start; 
+        Rendered = false; 
+        State  = { Authentication = None}; 
+        IsSigningIn = false
+        BufferedCommand = Cmd.none
+     }, Cmd.none
  
 let getToken (jsRuntime : IJSRuntime)  =
     let doWork () = 
@@ -92,6 +108,15 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
         let subModel, cmd = update  msg subModel
         {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
 
+    let genericUpdateWithCommon update subModel msg  msgFn pageFn =
+        let subModel, cmd, (commonCommand  : Cmd<Common.Message>) = update  msg (subModel, model.State)
+        if commonCommand |> List.isEmpty then 
+            {model with Page = pageFn({ Model = subModel})},  Cmd.map msgFn cmd
+        else
+            let m = {model with Page = pageFn({ Model = subModel}); BufferedCommand = Cmd.map msgFn cmd}
+            m,Cmd.map CommonMessage commonCommand
+
+
     match message, model.Page with
     | Rendered, _ -> { model with Rendered = true}, getToken jsRuntime
     | SetPage(Home _), _ -> initHome remote 
@@ -107,6 +132,7 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
                 }
             } 
         }, Cmd.none
+    | SignInRequested, _ -> { model with IsSigningIn = true}, Cmd.none
     | SignOutRequested, _ -> model , signOut jsRuntime
     | SignedOut, _ -> { model with State = { Authentication = None}}, Cmd.none
     | TokenNotFound , _ -> model, Cmd.none
@@ -127,7 +153,8 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
         model, (o,init) |> OrderDetail |> SetPage |> Cmd.ofMsg
 
     | CheckoutMsg msg, Checkout model ->
-         genericUpdate (Checkout.update remote)(model.Model) msg CheckoutMsg Checkout
+        let u = Checkout.update remote
+        genericUpdateWithCommon u (model.Model) msg CheckoutMsg Checkout
 
     | OrderDetailMsg(OrderDetail.Message.OrderLoaded _), page 
         when (page |> function | OrderDetail _ -> false | _ -> true) -> 
@@ -141,12 +168,15 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
             OrderDetailMsg 
             (fun pageModel -> OrderDetail(key, pageModel))
         
+    | CommonMessage (Common.Message.AuthenticationRequested), _ -> model, Cmd.ofMsg(SignInRequested)
+
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
 open Bolero.Html
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
+type SignIn = Template<"wwwroot\SignIn.html">
 
 let view  (js: IJSRuntime) ( model : Model) dispatch =
     let content =
@@ -161,7 +191,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         cond model.State.Authentication <| function
         | None -> 
             a [attr.``class`` "sign-in"; 
-                on.click(fun _ -> SignInRequested |> dispatch)] 
+                on.click(fun _ ->  CommonMessage (Common.Message.AuthenticationRequested) |> dispatch)] 
                 [text "Sign in"] 
         | Some {User = user} -> 
             concat [
@@ -171,6 +201,10 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
                     a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
                 ]
            ]
+    let signIn = 
+        cond model.IsSigningIn <| function
+        | true -> SignIn().Elt()
+        | _ -> empty
         //<span class="username">@context.User.Identity.Name</span>
         //<a class="sign-out" href="user/signout">Sign out</a>
     MainLayout()
@@ -188,6 +222,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
             ])
         .Body(content)
         .LoginDisplay(loginDisplay)
+        .SignIn(signIn)
         .Elt()
 
 open System

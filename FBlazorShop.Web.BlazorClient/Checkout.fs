@@ -43,7 +43,8 @@ type Message =
 let init (_ : PizzaService) (order : Order option)  =
     { Order =  order ; CurrentAddress = Address.Default; ValidatedAddress = None } , Cmd.none
 
-let update remote message (model : Model) =
+let noCommand state =  state, Cmd.none, Cmd.none
+let update remote message (model : Model, commonState : Common.State) =
 
     let validateModelForAddressForced address =
         let vAddress = validateAddress address
@@ -55,40 +56,48 @@ let update remote message (model : Model) =
             {model with CurrentAddress = address;}
         | Some _ -> validateModelForAddressForced address
         
-    match (message, model) with
+    match (message, (model,commonState)) with
     | SetAddressName value, _ -> 
       { model.CurrentAddress with Name = value} 
-      |> validateModelForAddress, Cmd.none
+      |> validateModelForAddress
+      |> noCommand
 
     | SetAddressCity value, _ -> 
         { model.CurrentAddress with City = value} 
-        |> validateModelForAddress, Cmd.none
+        |> validateModelForAddress 
+        |> noCommand
 
     | SetAddressLine1 value, _ -> 
         { model.CurrentAddress with Line1 = value} 
-        |> validateModelForAddress, Cmd.none
+        |> validateModelForAddress 
+        |> noCommand
 
     | SetAddressLine2 value, _ -> 
         { model.CurrentAddress with Line2 = value} 
-        |> validateModelForAddress, Cmd.none
+        |> validateModelForAddress
+        |> noCommand
 
     | SetAddressPostalCode value, _ -> 
         { model.CurrentAddress with PostalCode = value} 
-        |> validateModelForAddress, Cmd.none
+        |> validateModelForAddress
+        |> noCommand
     
     | SetAddressRegion value, _ -> 
         { model.CurrentAddress with Region = value} 
-        |> validateModelForAddress, Cmd.none
+        |> validateModelForAddress
+        |> noCommand
           
-    | _ , { ValidatedAddress = Some(Error _) } -> model, Cmd.none
+    | _ , ({ ValidatedAddress = Some(Error _) } ,_) -> model |> noCommand
 
-    | OrderPlaced order, { ValidatedAddress = None } -> 
-        model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order)
-
+    | OrderPlaced order, ({ ValidatedAddress = None } , _) -> 
+        model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
+    | OrderPlaced order, (_, { Authentication = None}) ->  
+        let c = Cmd.ofMsg(OrderPlaced order)
+        model, c, Common.authenticationRequested
     | OrderPlaced order, _ -> 
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd = Cmd.ofAsync remote.placeOrder order OrderAccepted raise
-        model, cmd
+        model, cmd, Cmd.none
 
     | OrderAccepted _ , _ -> invalidOp "should not happen"
 

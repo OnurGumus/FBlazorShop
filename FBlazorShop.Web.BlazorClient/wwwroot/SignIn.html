@@ -1,0 +1,29 @@
+﻿
+<div class="dialog-container">
+    <div class="dialog">
+        <div class="dialog-title">
+            <h2>Sign In</h2>
+        </div>
+
+        <form class="dialog-body">
+            <div class="form-field">
+                <label>Email:</label>
+                <div>
+                    <input bind="Address.Name" />
+                </div>
+            </div>
+
+            <div class="form-field">
+                <label>Password:</label>
+                <div>
+                    <input bind="Address.Line1" />
+                </div>
+            </div>
+        </form>
+
+        <div class="dialog-buttons">
+            <button class="btn btn-secondary mr-auto" onclick="${Cancel}">Cancel</button>
+            <button class="btn btn-success ml-auto" onclick="${SignIn}">Sign in ></button>
+        </div>
+    </div>
+</div>

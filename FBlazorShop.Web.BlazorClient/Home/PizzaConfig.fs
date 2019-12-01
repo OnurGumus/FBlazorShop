@@ -23,7 +23,6 @@ let init (remote : PizzaService ) () =
     let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
     { Pizza = None; Toppings = [] }, cmd
 
-
 let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> = 
     match msg with
     | PizzaConfigRequested p -> 
@@ -58,8 +57,6 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
     | Cancel | ConfigDone _ ->
         { state with Pizza = None }, Cmd.none
 
-        
-
 open Bolero
 
 let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher = 
@@ -79,7 +76,6 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
                 option [ attr.disabled true; attr.selected true; attr.value -1] [text "select"]
                 forEach (toppings |> List.mapi (fun i t -> (i,t))) ( fun (i,t) -> option [ attr.value i] [textf "%s - $%s" t.Name t.FormattedBasePrice] )
             ]
-                
     ]
 
 type PizzaConfig = Template<"wwwroot\ConfigurePizza.html">
