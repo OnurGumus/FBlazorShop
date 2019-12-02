@@ -27,7 +27,6 @@
     <Compile Include="Home\Orders.fs" />
     <Compile Include="Home\Home.fs" />
     <Compile Include="SignIn.fs" />
-    <Compile Include="Library.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

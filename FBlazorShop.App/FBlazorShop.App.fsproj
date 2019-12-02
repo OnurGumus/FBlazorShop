@@ -8,7 +8,6 @@
     <Compile Include="Model.fs" />
     <Compile Include="IOrderService.fs" />
     <Compile Include="IReadOnlyRepo.fs" />
-    <Compile Include="Domain.fs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="paket.references" />
