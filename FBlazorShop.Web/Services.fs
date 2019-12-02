@@ -51,6 +51,13 @@ type public PizzaService(ctx: IRemoteContext) =
                         let! i = order |> orderService.PlaceOrder  |> Async.AwaitTask
                         return i
                     }
-
+            signIn = 
+                fun (email, pass) -> 
+                    async { 
+                        match pass with 
+                        | "Password" ->
+                            return Ok( { User = email ; Token = email ; TimeStamp = System.DateTime.Now} )
+                        | _ -> return Error("Invalid login. Try Password as password")
+                    }
         }
    

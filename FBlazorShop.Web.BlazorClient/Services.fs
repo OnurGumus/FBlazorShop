@@ -2,6 +2,7 @@
 
 open Bolero.Remoting
 open FBlazorShop.App.Model
+open Common
 
 type public PizzaService = 
     {
@@ -11,6 +12,7 @@ type public PizzaService =
         getOrderWithStatuses : unit -> Async<OrderWithStatus list>
         getOrderWithStatus : int -> Async<OrderWithStatus option>
         placeOrder : Order -> Async<int>
+        signIn : string * string -> Async<Result<Authentication,string>>
     }
     interface IRemoteService with
         member __.BasePath = "/pizzas"

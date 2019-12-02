@@ -19,8 +19,8 @@ type Model = {
     Page : Page
     Rendered : bool
     State : Common.State
-    IsSigningIn : bool
     BufferedCommand : Cmd<Message>
+    SignIn : SignIn.Model
 }
 
 and Message= 
@@ -33,10 +33,10 @@ and Message=
     | TokenRead of string
     | TokenNotFound
     | TokenSaved
-    | SignInRequested
     | SignOutRequested
     | SignedOut
     | CommonMessage of Common.Message
+    | SignInMessage of SignIn.Message
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
@@ -46,34 +46,28 @@ let defaultPageModel remote = function
 | Start -> ()
 let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote)
 
-let initPage init msg page =
-    let model, cmd = init 
-    let page = { Model = model } |> page
-    {
-        Page = page  
-        Rendered = false
-        State = {Authentication = None}
-        IsSigningIn = false
-        BufferedCommand = Cmd.none
-    }, Cmd.map msg cmd
+let initPage  init (model : Model) msg page =
+    let pageModel, cmd = init 
+    let page = { Model = pageModel } |> page
+    { model with Page  = page}, Cmd.map msg cmd
     
-let initOrderDetail remote key = 
-    initPage (OrderDetail.init remote key) OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
+let initOrderDetail  remote key model = 
+    initPage  (OrderDetail.init remote key) model OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
 
-let initMyOrders remote = 
-    initPage (MyOrders.init remote) MyOrdersMsg MyOrders
+let initMyOrders remote  model = 
+    initPage  (MyOrders.init remote) model MyOrdersMsg MyOrders
 
-let initCheckout remote order = 
-    initPage (Checkout.init remote order) CheckoutMsg Checkout
+let initCheckout remote model order = 
+    initPage   (Checkout.init remote order) model CheckoutMsg Checkout
 
-let initHome remote = 
-    initPage (Home.init remote) HomeMsg Home
+let initHome remote model = 
+    initPage (Home.init remote) model HomeMsg Home
 
 let init = 
     {   Page = Start; 
         Rendered = false; 
         State  = { Authentication = None}; 
-        IsSigningIn = false
+        SignIn = SignIn.init() |> fst
         BufferedCommand = Cmd.none
      }, Cmd.none
  
@@ -90,7 +84,7 @@ let getToken (jsRuntime : IJSRuntime)  =
                 | null -> TokenNotFound
                 | t -> TokenRead t
         }
-    Cmd.ofAsync doWork () id raise
+    Cmd.ofAsync doWork () id (fun _ -> TokenNotFound)
 
 let signOut (jsRuntime : IJSRuntime)  =
     let doWork () = 
@@ -100,6 +94,17 @@ let signOut (jsRuntime : IJSRuntime)  =
                     .AsTask() 
                     |> Async.AwaitTask
             return SignedOut
+        }
+    Cmd.ofAsync doWork () id raise
+
+let signInCmd (jsRuntime : IJSRuntime) (token : string)  =
+    let doWork () = 
+        async{ 
+            do! 
+                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "name" , token)
+                    .AsTask() 
+                    |> Async.AwaitTask
+            return TokenSaved
         }
     Cmd.ofAsync doWork () id raise
 
@@ -119,11 +124,11 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
 
     match message, model.Page with
     | Rendered, _ -> { model with Rendered = true}, getToken jsRuntime
-    | SetPage(Home _), _ -> initHome remote 
-    | SetPage(MyOrders _), _ -> initMyOrders remote
-    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key 
+    | SetPage(Home _), _ -> initHome remote model
+    | SetPage(MyOrders _), _ -> initMyOrders remote model
+    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
-    | SetPage(Checkout m), _ -> initCheckout remote m.Model.Order 
+    | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order 
     | TokenRead t , _ ->  
         { model with 
             State = { 
@@ -132,7 +137,7 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
                 }
             } 
         }, Cmd.none
-    | SignInRequested, _ -> { model with IsSigningIn = true}, Cmd.none
+
     | SignOutRequested, _ -> model , signOut jsRuntime
     | SignedOut, _ -> { model with State = { Authentication = None}}, Cmd.none
     | TokenNotFound , _ -> model, Cmd.none
@@ -168,7 +173,16 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
             OrderDetailMsg 
             (fun pageModel -> OrderDetail(key, pageModel))
         
-    | CommonMessage (Common.Message.AuthenticationRequested), _ -> model, Cmd.ofMsg(SignInRequested)
+    | CommonMessage (Common.Message.AuthenticationRequested), _ ->
+        let m , cmd = SignIn.update remote SignIn.SignInRequested model.SignIn
+        {model with SignIn = m}, Cmd.map SignInMessage cmd
+
+    | SignInMessage (SignIn.Message.SignInDone c), _ -> 
+        { model with State = { model.State with Authentication = Some c }}, Cmd.batch[ signInCmd jsRuntime c.User; model.BufferedCommand]
+
+    | SignInMessage msg, _ -> 
+        let m, cmd = SignIn.update remote msg (model.SignIn)
+        {model with SignIn = m }, Cmd.map SignInMessage cmd
 
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
@@ -176,7 +190,6 @@ open Bolero.Html
 open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
-type SignIn = Template<"wwwroot\SignIn.html">
 
 let view  (js: IJSRuntime) ( model : Model) dispatch =
     let content =
@@ -201,12 +214,8 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
                     a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
                 ]
            ]
-    let signIn = 
-        cond model.IsSigningIn <| function
-        | true -> SignIn().Elt()
-        | _ -> empty
-        //<span class="username">@context.User.Identity.Name</span>
-        //<a class="sign-out" href="user/signout">Sign out</a>
+    let signIn = SignIn.view model.SignIn (SignInMessage >> dispatch  )
+
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All 
             [attr.href "/"; attr.``class`` "nav-tab"] 

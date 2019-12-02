@@ -9,21 +9,24 @@
             <div class="form-field">
                 <label>Email:</label>
                 <div>
-                    <input bind="Address.Name" />
+                    <input bind="${Email}" />
+                    <div class="validation-message">&nbsp; ${EmailError}</div>
                 </div>
             </div>
 
             <div class="form-field">
                 <label>Password:</label>
                 <div>
-                    <input bind="Address.Line1" />
+                    <input type="password" bind="${Password}" />
+                    <div class="validation-message">&nbsp; ${PasswordError}</div>
                 </div>
             </div>
+            <div class="validation-message">&nbsp; ${LoginError}</div>
         </form>
 
         <div class="dialog-buttons">
             <button class="btn btn-secondary mr-auto" onclick="${Cancel}">Cancel</button>
-            <button class="btn btn-success ml-auto" onclick="${SignIn}">Sign in ></button>
+            <button class="btn btn-success ml-auto" onclick="${Submit}">Sign in ></button>
         </div>
     </div>
 </div>
