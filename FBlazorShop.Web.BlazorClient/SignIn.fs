@@ -73,6 +73,7 @@ let update remote message (model : Model) =
         {model.CurrentLogin with Email = value} |> validate, Cmd.none
     | SetFormField("Password",value),_ -> 
         {model.CurrentLogin with Password = value} |> validate, Cmd.none
+    | _ , ({ ValidatedLogin = Some(Error _) }) -> model , Cmd.none
     | SignInSubmitted , { ValidatedLogin = None }  -> 
            model.CurrentLogin |> validateForced, Cmd.ofMsg (SignInSubmitted) 
 
@@ -81,17 +82,23 @@ let update remote message (model : Model) =
     | _ -> failwith ""
     
 open Bolero.Html
-
+open System
 let view (model : Model) dispatch = 
     cond model.IsSigningIn <| function
     | true -> 
+        let login = model.CurrentLogin
+        let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedLogin
+        let pd name = Action<_> (fun v -> dispatch (SetFormField(name,v )))
+        let formItems = 
+            concat [ 
+                formFieldItem "text" (nameof login.Email) (login.Email, pd (nameof login.Email))
+                formFieldItem "password" (nameof login.Password) (login.Password, pd (nameof login.Password))
+            ]
+
         SignIn()
-            .Email(model.CurrentLogin.Email, fun v -> dispatch (SetFormField("Email",v )))
-            .Password(model.CurrentLogin.Password, fun v -> dispatch (SetFormField("Password",v )))
+            .FormItems(formItems)
             .Cancel(fun _ -> dispatch SignInCancelled)
             .Submit(fun _ -> dispatch SignInSubmitted)
             .LoginError(defaultArg model.FailureReason "")
-         //   .EmailError(model.ValidatedLogin |> function Some r -> (r |> function Ok _ -> "" | Error e -> defaultArg (e.TryFind("Email")) "") | _ -> "")
-            
             .Elt()
     | _ -> empty

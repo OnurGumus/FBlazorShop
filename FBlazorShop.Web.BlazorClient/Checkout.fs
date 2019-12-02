@@ -104,30 +104,16 @@ let update remote message (model : Model, commonState : Common.State) =
 open Bolero.Html
 open System
 
-type OrderDetail = Template<"wwwroot\Checkout.html">
+type Checkout = Template<"wwwroot\Checkout.html">
+
 let view (model : Model) dispatch = 
     div [ attr.``class`` "main"][
     cond model.Order <| function
         | Some currentOrder -> 
             let pd f = Action<_> (fun n -> n |> f |> dispatch)
-            let errorAndClass name (result:Result<_,Map<string, string list>> option) = 
-                match result with
-                | Some (Error e) when (e.ContainsKey name && e.[name] <> []) -> String.Join(",", e.[name]), "invalid"
-                | Some _ -> "", "modified valid"
-                | None -> "",""
-
-            let formFieldItem (name : string) value =
-                let error, validClass = errorAndClass name model.ValidatedAddress
-                OrderDetail
-                    .FormFieldItem()
-                        .Label(name)
-                        .ValidClass(validClass)
-                        .Value(value)
-                        .Error(error)
-                        .Elt()
 
             let address = model.CurrentAddress
-            
+            let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedAddress "text"
             let formItems = 
                 concat [ 
                     formFieldItem (nameof address.Name) (address.Name, pd SetAddressName)
@@ -138,7 +124,7 @@ let view (model : Model) dispatch =
                     formFieldItem (nameof address.Line2) (address.Line2, pd SetAddressLine2)
                 ]
 
-            OrderDetail()
+            Checkout()
                 .OrderReview(OrderReview.view currentOrder dispatch)
                 .PlaceOrder(fun _ -> dispatch (OrderPlaced currentOrder))
                 .FormFieldItems(formItems)
