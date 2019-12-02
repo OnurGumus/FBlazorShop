@@ -2,28 +2,7 @@
 open Microsoft.JSInterop
 open Bolero
 open Microsoft.AspNetCore.Components
-
-//@using Microsoft.JSInterop
-//@inject IJSRuntime JSRuntime
-
-//<div id="@elementId" style="height: 100%; width: 100%;"></div>
-
-//@code {
-//    string elementId = $"map-{Guid.NewGuid().ToString("D")}";
-    
-//    [Parameter] public double Zoom { get; set; }
-//    [Parameter] public List<Marker> Markers { get; set; }
-
-//    protected async override Task OnAfterRenderAsync(bool firstRender)
-//    {
-//        await JSRuntime.InvokeVoidAsync(
-//            "deliveryMap.showOrUpdate",
-//            elementId,
-//            Markers);
-//    }
-//}
 open Bolero.Html
-open System.Linq
 
 type Map() =
     inherit Component()
@@ -41,5 +20,5 @@ type Map() =
         div [attr.id elementId; attr.style "height: 100%; width: 100%;"][]
 
     override this.OnAfterRenderAsync _ = 
-        this.JSRuntime.InvokeVoidAsync("deliveryMap.showOrUpdate", elementId, (this.Markers.ToList())).AsTask()
+        this.JSRuntime.InvokeVoidAsync("deliveryMap.showOrUpdate", elementId, (this.Markers)).AsTask()
         
