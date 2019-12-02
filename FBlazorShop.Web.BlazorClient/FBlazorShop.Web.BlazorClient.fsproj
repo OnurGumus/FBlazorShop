@@ -35,6 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FBlazorShop.App\FBlazorShop.App.fsproj" />
+    <ProjectReference Include="..\FBlazorShop.ComponentsLibrary\FBlazorShop.ComponentsLibrary.fsproj" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

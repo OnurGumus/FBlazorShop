@@ -16,7 +16,9 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.Web", "FBlazorS
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop.Web.BlazorClient", "FBlazorShop.Web.BlazorClient\FBlazorShop.Web.BlazorClient.fsproj", "{19E673D1-D2FB-432B-ABD5-6B328983E5A9}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FBlazorShop", "FBlazorShop\FBlazorShop.fsproj", "{4EC8E458-814D-4885-896D-C368DEDC84FA}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FBlazorShop", "FBlazorShop\FBlazorShop.fsproj", "{4EC8E458-814D-4885-896D-C368DEDC84FA}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FBlazorShop.ComponentsLibrary", "FBlazorShop.ComponentsLibrary\FBlazorShop.ComponentsLibrary.fsproj", "{E536CC5C-C69F-4441-89E9-2DD971930742}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +46,10 @@ Global
 		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EC8E458-814D-4885-896D-C368DEDC84FA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E536CC5C-C69F-4441-89E9-2DD971930742}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E536CC5C-C69F-4441-89E9-2DD971930742}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E536CC5C-C69F-4441-89E9-2DD971930742}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E536CC5C-C69F-4441-89E9-2DD971930742}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

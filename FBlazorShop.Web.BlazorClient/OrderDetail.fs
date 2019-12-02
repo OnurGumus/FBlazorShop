@@ -28,6 +28,9 @@ let update remote message (model : Model) =
     | OrderLoaded (id, order) -> { Order =  order }, loadPeriodically remote id
 
 open Bolero.Html
+open FBlazorShop.ComponentsLibrary
+let map  markers =
+        comp<Map> ["Zoom" => 13.0; "Markers" => markers ] []
 
 type OrderDetail = Template<"wwwroot\OrderDetail.html">
 let view (model : Model) dispatch = 
@@ -38,7 +41,7 @@ let view (model : Model) dispatch =
                 .OrderCreatedTimeToLongDateString(x.Order.CreatedTime.ToLongDateString())
                 .StatusText(x.StatusText)
                 .OrderReview(OrderReview.view x.Order dispatch)
-                .Elt()
+                .Map(map (x.MapMarkers)) .Elt()
            
         | _ -> text "Loading..."
     ]
