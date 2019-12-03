@@ -4,11 +4,22 @@ open FBlazorShop.Web
 open Microsoft.AspNetCore.Hosting
 open FBlazorShop.App
 open FBlazorShop.App.Model
+open JWT.Builder
+open JWT
+open System.Security.Cryptography
+open JWT.Algorithms
+open System.Collections.Generic
 
 type public PizzaService(ctx: IRemoteContext) =
         inherit RemoteHandler<BlazorClient.Services.PizzaService>()
-
-        let extractUser token = token
+        let secret = "GQDstcKsx0NHjPOuXOYg5MbeJ1XT0uFiwDVvVBrk";
+        let extractUser token = 
+            let json = 
+                JwtBuilder()
+                    .WithSecret(secret)
+                    .MustVerifySignature()
+                    .Decode<IDictionary<string, string>>(token); 
+            json.["email"]
 
         member private _.GetService<'T>() : 'T = 
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
@@ -69,7 +80,14 @@ type public PizzaService(ctx: IRemoteContext) =
                     async { 
                         match pass with 
                         | "Password" ->
-                            return Ok( { User = email ; Token = email ; TimeStamp = System.DateTime.Now} )
+                            let token = 
+                                JwtBuilder()
+                                    .WithAlgorithm(new HMACSHA256Algorithm())
+                                    .WithSecret(secret)
+                                    .AddClaim("exp", System.DateTimeOffset.UtcNow.AddHours(1.0).ToUnixTimeSeconds())
+                                    .AddClaim("email", email)
+                                    .Build();
+                            return Ok( { User = email ; Token = token ; TimeStamp = System.DateTime.Now} )
                         | _ -> return Error("Invalid login. Try Password as password")
                     }
         }

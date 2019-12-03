@@ -18,4 +18,5 @@ nuget Microsoft.AspNetCore.Blazor.Server = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.Build = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.DevServer = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation prerelease
-nuget Fable.Validation
+nuget JWT
+nuget Newtonsoft.Json

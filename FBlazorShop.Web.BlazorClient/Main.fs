@@ -7,6 +7,7 @@ open Elmish
 open Services
 open Orders
 open Bolero
+open Newtonsoft.Json
 
 type Page =
     | Start
@@ -29,7 +30,7 @@ and Message=
     | OrderDetailMsg of OrderDetail.Message
     | CheckoutMsg of Checkout.Message
     | Rendered
-    | TokenRead of string
+    | TokenRead of Common.Authentication
     | TokenSet
     | TokenNotFound
     | TokenSaved of Common.Authentication
@@ -79,11 +80,10 @@ let getToken (jsRuntime : IJSRuntime)  =
                 jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "token")
                     .AsTask() 
                     |> Async.AwaitTask
-            
             return
                 match res with
                 | null -> TokenNotFound
-                | t -> TokenRead t
+                | t -> t |> JsonConvert.DeserializeObject<Common.Authentication> |> TokenRead
         }
     Cmd.ofAsync doWork () id (fun _ -> TokenNotFound)
 
@@ -101,8 +101,9 @@ let signOut (jsRuntime : IJSRuntime)  =
 let signInCmd (jsRuntime : IJSRuntime) (token : Common.Authentication)  =
     let doWork () = 
         async{ 
+            let ser = JsonConvert.SerializeObject(token)
             do! 
-                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "token" , token.User)
+                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "token" , ser)
                     .AsTask() 
                     |> Async.AwaitTask
             return TokenSaved token
@@ -135,13 +136,7 @@ let update remote jsRuntime message model =
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order 
     | TokenRead t , _ ->  
-        { model with 
-            State = { 
-                Authentication = Some {  
-                    User = t; Token = t; TimeStamp = System.DateTime.Now 
-                }
-            } 
-        }, Cmd.ofMsg TokenSet
+        { model with  State = { Authentication = Some t }}, Cmd.ofMsg TokenSet
     | SignOutRequested, _ -> model , signOut jsRuntime
     | SignedOut, _ -> init
     | TokenNotFound , _ -> model, Cmd.none
