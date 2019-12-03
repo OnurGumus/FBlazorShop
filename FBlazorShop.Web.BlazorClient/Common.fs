@@ -5,6 +5,7 @@ open System
 
 type Message =
     | AuthenticationRequested
+    | Error of exn
 
 let authenticationRequested  = Cmd.ofMsg (AuthenticationRequested)
 

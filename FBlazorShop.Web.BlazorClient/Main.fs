@@ -39,7 +39,8 @@ and Message=
     | CommonMessage of Common.Message
     | SignInMessage of SignIn.Message
     | RemoveBuffer
-
+    | TokenRenewed of Common.Authentication
+    
 let defaultPageModel remote  = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
@@ -72,7 +73,17 @@ let init =
         SignIn = SignIn.init() |> fst
         BufferedCommand = Cmd.none
      }, Cmd.none
- 
+let renewTokenCmd (remote : PizzaService) token =
+    let doWork token = 
+        async{ 
+            let! newToken = remote.renewToken token
+            return
+                match newToken with
+                | Ok t -> t
+                | _ -> failwith "auth error"
+        }
+    Cmd.ofAsync doWork token TokenRenewed (Common.Error >> CommonMessage)
+
 let getToken (jsRuntime : IJSRuntime)  =
     let doWork () = 
         async{ 
@@ -85,7 +96,7 @@ let getToken (jsRuntime : IJSRuntime)  =
                 | null -> TokenNotFound
                 | t -> t |> JsonConvert.DeserializeObject<Common.Authentication> |> TokenRead
         }
-    Cmd.ofAsync doWork () id (fun _ -> TokenNotFound)
+    Cmd.ofAsync doWork () id (fun _ -> TokenNotFound) 
 
 let signOut (jsRuntime : IJSRuntime)  =
     let doWork () = 
@@ -135,7 +146,8 @@ let update remote jsRuntime message model =
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order 
-    | TokenRead t , _ ->  
+    | TokenRead t , _ ->  model, renewTokenCmd remote t.Token
+    | TokenRenewed t , _ ->
         { model with  State = { Authentication = Some t }}, Cmd.ofMsg TokenSet
     | SignOutRequested, _ -> model , signOut jsRuntime
     | SignedOut, _ -> init

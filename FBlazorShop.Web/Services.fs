@@ -13,13 +13,24 @@ open System.Collections.Generic
 type public PizzaService(ctx: IRemoteContext) =
         inherit RemoteHandler<BlazorClient.Services.PizzaService>()
         let secret = "GQDstcKsx0NHjPOuXOYg5MbeJ1XT0uFiwDVvVBrk";
+        [<Literal>]
+        let EMAIL = "email"
+
+        let generateToken email =
+            JwtBuilder()
+                .WithAlgorithm(new HMACSHA256Algorithm())
+                .WithSecret(secret)
+                .AddClaim("exp", System.DateTimeOffset.UtcNow.AddDays(7.0).ToUnixTimeSeconds())
+                .AddClaim(EMAIL, email)
+                .Build()
+
         let extractUser token = 
             let json = 
                 JwtBuilder()
                     .WithSecret(secret)
                     .MustVerifySignature()
                     .Decode<IDictionary<string, string>>(token); 
-            json.["email"]
+            json.[EMAIL]
 
         member private _.GetService<'T>() : 'T = 
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
@@ -56,16 +67,22 @@ type public PizzaService(ctx: IRemoteContext) =
                             |> List.map OrderWithStatus.FromOrder
                     }
             getOrderWithStatus = 
-                            fun (token, i) -> 
-                                let user = extractUser token    
-                                async{
-                                    let! orders = this.GetItems<Order>()() 
-                                    let status = 
-                                        orders 
-                                        |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user) 
-                                        |> Option.map OrderWithStatus.FromOrder
-                                    return status
-                                }
+                fun (token, i) -> 
+                    let user = extractUser token    
+                    async {
+                        let! orders = this.GetItems<Order>()() 
+                        let status = 
+                            orders 
+                            |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user) 
+                            |> Option.map OrderWithStatus.FromOrder
+                        return status
+                    }
+
+            renewToken =
+                fun token ->
+                    let user = extractUser token
+                    let token = generateToken user
+                    async {  return Ok( { User = user ; Token = token ; TimeStamp = System.DateTime.Now} )}
             placeOrder = 
                 fun (token, order) -> 
                     let user = extractUser token
@@ -80,13 +97,7 @@ type public PizzaService(ctx: IRemoteContext) =
                     async { 
                         match pass with 
                         | "Password" ->
-                            let token = 
-                                JwtBuilder()
-                                    .WithAlgorithm(new HMACSHA256Algorithm())
-                                    .WithSecret(secret)
-                                    .AddClaim("exp", System.DateTimeOffset.UtcNow.AddHours(1.0).ToUnixTimeSeconds())
-                                    .AddClaim("email", email)
-                                    .Build();
+                            let token = generateToken email
                             return Ok( { User = email ; Token = token ; TimeStamp = System.DateTime.Now} )
                         | _ -> return Error("Invalid login. Try Password as password")
                     }

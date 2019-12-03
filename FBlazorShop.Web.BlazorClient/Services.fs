@@ -13,6 +13,7 @@ type public PizzaService =
         getOrderWithStatus : string * int -> Async<OrderWithStatus option>
         placeOrder : string * Order -> Async<int>
         signIn : string * string -> Async<Result<Authentication,string>>
+        renewToken : string -> Async<Result<Authentication,string>>
     }
     interface IRemoteService with
         member __.BasePath = "/pizzas"
