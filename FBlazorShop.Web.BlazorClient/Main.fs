@@ -17,7 +17,6 @@ type Page =
 
 type Model = { 
     Page : Page
-    Rendered : bool
     State : Common.State
     BufferedCommand : Cmd<Message>
     SignIn : SignIn.Model
@@ -37,6 +36,7 @@ and Message=
     | SignedOut
     | CommonMessage of Common.Message
     | SignInMessage of SignIn.Message
+    | RemoveBuffer
 
 let defaultPageModel remote = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
@@ -49,7 +49,7 @@ let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPage
 let initPage  init (model : Model) msg page =
     let pageModel, cmd = init 
     let page = { Model = pageModel } |> page
-    { model with Page  = page}, Cmd.map msg cmd
+    { model with Page  = page; }, Cmd.map msg cmd
     
 let initOrderDetail  remote key model = 
     initPage  (OrderDetail.init remote key) model OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
@@ -65,7 +65,6 @@ let initHome remote model =
 
 let init = 
     {   Page = Start; 
-        Rendered = false; 
         State  = { Authentication = None}; 
         SignIn = SignIn.init() |> fst
         BufferedCommand = Cmd.none
@@ -123,8 +122,12 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
 
 
     match message, model.Page with
-    | Rendered, _ -> { model with Rendered = true}, getToken jsRuntime
+    | RemoveBuffer, _ -> { model with BufferedCommand = Cmd.none}, Cmd.none
+    | Rendered, _ -> model, getToken jsRuntime
+    | SetPage Start, _
     | SetPage(Home _), _ -> initHome remote model
+    | SetPage(MyOrders _), _ when model.State.Authentication.IsNone -> 
+        {model with BufferedCommand = Cmd.ofMsg(message)}, Cmd.ofMsg(CommonMessage Common.AuthenticationRequested)
     | SetPage(MyOrders _), _ -> initMyOrders remote model
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
@@ -139,7 +142,7 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
         }, Cmd.none
 
     | SignOutRequested, _ -> model , signOut jsRuntime
-    | SignedOut, _ -> { model with State = { Authentication = None}}, Cmd.none
+    | SignedOut, _ -> init
     | TokenNotFound , _ -> model, Cmd.none
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
@@ -178,12 +181,12 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
         {model with SignIn = m}, Cmd.map SignInMessage cmd
 
     | SignInMessage (SignIn.Message.SignInDone c), _ -> 
-        { model with State = { model.State with Authentication = Some c }}, Cmd.batch[ signInCmd jsRuntime c.User; model.BufferedCommand]
+        { model with State = { model.State with Authentication = Some c }}, Cmd.batch[ signInCmd jsRuntime c.User; model.BufferedCommand; Cmd.ofMsg(RemoveBuffer)]
 
     | SignInMessage msg, _ -> 
         let m, cmd = SignIn.update remote msg (model.SignIn)
         {model with SignIn = m }, Cmd.map SignInMessage cmd
-
+    | TokenSaved, _ -> model, Cmd.none
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
 open Bolero.Html
@@ -247,7 +250,7 @@ type MyApp() =
         |> Program.withRouter router
         |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
-        |> Program.withConsoleTrace
+        |> Program.withTrace(fun msg model -> System.Console.WriteLine(msg))
         |> Program.withErrorHandler 
             (fun (x,y) -> 
                 Console.WriteLine("Error Message:" + x)

@@ -53,6 +53,9 @@ type PizzaCards = Template<"wwwroot\PizzaCards.html">
 
 type ViewItem() =
     inherit ElmishComponent<PizzaSpecial, Message>()
+    // Check for model changes by only looking at the value.
+    override _.ShouldRender(oldModel, newModel) =
+        oldModel.Id <> newModel.Id
 
     override __.View special dispatch =
 
@@ -66,18 +69,27 @@ type ViewItem() =
                   |> PizzaConfigRequested
                   |> PizzaConfigMsg
                   |> dispatch).Elt()
-
 open Bolero.Html
 
-let view model dispatch =
-    let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
+type Cards() =
+    inherit ElmishComponent<Model, Message>()
+    // Check for model changes by only looking at the value.
+    override _.ShouldRender(oldModel, newModel) =
+        //oldModel.specials <> newModel.specials
+        false
+    override __.View model dispatch =
+        forEach model.specials <| fun i -> ecomp<ViewItem, _, _> i dispatch
 
+
+let view model dispatch =
     cond model.specials <| function
     | [] -> empty
     | _ ->
-        let orderContents = Orders.view model.Order (OrderMsg >> dispatch)
-        PizzaCards()
-            .Items(forEach model.specials <| fun i -> ecomp<ViewItem, _, _> i dispatch)
-            .OrderContents(orderContents)
-            .PizzaConfig(pizzaconfig)
-            .Elt()
+         let cards = ecomp<Cards, _, _> model dispatch
+         let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
+         let orderContents = Orders.view model.Order (OrderMsg >> dispatch)
+         PizzaCards()
+             .Items(cards)
+             .OrderContents(orderContents)
+             .PizzaConfig(pizzaconfig)
+             .Elt()
