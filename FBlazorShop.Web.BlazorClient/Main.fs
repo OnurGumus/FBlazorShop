@@ -10,7 +10,6 @@ open Bolero
 open Newtonsoft.Json
 
 type Page =
-    | Start
     | [<EndPoint "/">] Home of Model : PageModel<Home.Model>                  
     | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
@@ -46,7 +45,6 @@ let defaultPageModel remote  = function
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
 | OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  (key , None)|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
-| Start -> ()
 let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote)
 
 let initPage  init (model : Model) msg page =
@@ -68,8 +66,8 @@ let initHome remote model =
     initPage (Home.init remote) model HomeMsg Home
 
 let init = 
-    {   Page = Start; 
-        State  = { Authentication = None}; 
+    {   Page = Home Router.noModel; 
+        State  = { Authentication = Common.AuthState.NotTried}; 
         SignIn = SignIn.init() |> fst
         BufferedCommand = Cmd.none
      }, Cmd.none
@@ -138,20 +136,25 @@ let update remote jsRuntime message model =
     match message, model.Page with
     | RemoveBuffer, _ -> { model with BufferedCommand = Cmd.none}, Cmd.none
     | Rendered, _ -> model, getToken jsRuntime
-    | SetPage Start, _
     | SetPage(Home _), _ -> initHome remote model
-    | SetPage(MyOrders _), _ when model.State.Authentication.IsNone -> 
-        {model with BufferedCommand = Cmd.ofMsg(message)}, Cmd.ofMsg(CommonMessage Common.AuthenticationRequested)
+    | SetPage(MyOrders _), _ 
+        when( model.State.Authentication |> function  Common.AuthState.Failed -> true | _ -> false )->
+            {model with BufferedCommand = Cmd.ofMsg(message)}, Cmd.ofMsg(CommonMessage Common.AuthenticationRequested)
     | SetPage(MyOrders _), _ -> initMyOrders remote model
     | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order 
     | TokenRead t , _ ->  model, renewTokenCmd remote t.Token
     | TokenRenewed t , _ ->
-        { model with  State = { Authentication = Some t }}, Cmd.ofMsg TokenSet
+        { model with  State = { Authentication = Common.AuthState.Success t }; }, Cmd.ofMsg TokenSet
     | SignOutRequested, _ -> model , signOut jsRuntime
-    | SignedOut, _ -> init
-    | TokenNotFound , _ -> model, Cmd.none
+    | SignedOut, _ -> 
+        let model, cmd = init
+        {model with State = { Authentication = Common.AuthState.Failed}}, cmd
+    | TokenNotFound , _ -> 
+        { model with State = {model.State with Authentication = Common.AuthState.Failed} }, Cmd.none
+    | TokenSet, MyOrders _ -> 
+        model, MyOrders.reloadCmd |> Cmd.map MyOrdersMsg
     | TokenSet, OrderDetail _ -> 
         model, OrderDetail.reloadCmd |> Cmd.map OrderDetailMsg
 
@@ -198,7 +201,7 @@ let update remote jsRuntime message model =
         {model with SignIn = m }, Cmd.map SignInMessage cmd
 
     | TokenSaved t, _ -> 
-     { model with State = { model.State with Authentication = Some t}}, 
+     { model with State = { model.State with Authentication = Common.AuthState.Success t}}, 
         Cmd.batch[ model.BufferedCommand; Cmd.ofMsg(RemoveBuffer)]
     | TokenSet , _ -> model , Cmd.none
 
@@ -217,14 +220,14 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         | MyOrders model -> MyOrders.view model.Model (MyOrdersMsg >> dispatch)
         | OrderDetail(_ ,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
         | Checkout m -> Checkout.view m.Model (CheckoutMsg >> dispatch)
-        | Start -> text "Loading ..."
+
     let loginDisplay =
         cond model.State.Authentication <| function
-        | None -> 
+        | Common.AuthState.NotTried | Common.AuthState.Failed-> 
             a [attr.``class`` "sign-in"; 
                 on.click(fun _ ->  CommonMessage (Common.Message.AuthenticationRequested) |> dispatch)] 
                 [text "Sign in"] 
-        | Some {User = user} -> 
+        | Common.AuthState.Success {User = user} -> 
             concat [
                 img [attr.src ("img/user.svg" |> prependContent)]
                 div [] [

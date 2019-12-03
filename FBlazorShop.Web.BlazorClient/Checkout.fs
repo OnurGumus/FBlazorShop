@@ -91,10 +91,10 @@ let update remote message (model : Model, commonState : Common.State) =
 
     | OrderPlaced order, ({ ValidatedAddress = None } , _) -> 
         model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
-    | OrderPlaced order, (_, { Authentication = None}) ->  
+    | OrderPlaced order, (_, { Authentication = Common.AuthState.Failed}) ->  
         let c = Cmd.ofMsg(OrderPlaced order)
         model, c, Common.authenticationRequested
-    | OrderPlaced order,(_,{Authentication = Some auth}) -> 
+    | OrderPlaced order,(_,{Authentication = Common.AuthState.Success auth}) -> 
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd = Cmd.ofAsync remote.placeOrder (auth.Token, order) OrderAccepted raise
         model, cmd, Cmd.none

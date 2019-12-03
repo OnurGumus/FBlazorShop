@@ -14,7 +14,7 @@ type Authentication = {
     Token : string;
     TimeStamp : DateTime;
 }
-
+type AuthState = NotTried | Failed | Success of Authentication
 type State = { 
-    Authentication : Authentication option;
+    Authentication : AuthState;
 }

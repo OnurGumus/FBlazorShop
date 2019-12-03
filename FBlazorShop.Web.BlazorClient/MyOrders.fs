@@ -10,14 +10,19 @@ type Model = { MyOrders : OrderWithStatus list option}
 type Message =
     | OrdersLoaded  of OrderWithStatus list
     | Initialized
+    | Reload
+
+let reloadCmd = Cmd.ofMsg Reload
 
 let init (remote : PizzaService)  =
     { MyOrders = None } , Cmd.ofMsg Initialized
 
 let update (remote :PizzaService) message (model , commonState: Common.State) = 
     match message, commonState.Authentication with
-    | Initialized , Some auth-> model, Cmd.ofAsync remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
+    | Reload , Common.AuthState.Success auth 
+    | Initialized , Common.AuthState.Success auth-> model, Cmd.ofAsync remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
     | OrdersLoaded orders , _ -> { MyOrders = Some orders }, Cmd.none, Cmd.none
+    | _ , Common.AuthState.NotTried -> model, Cmd.none, Cmd.none
     | _ -> failwith ""
 
 

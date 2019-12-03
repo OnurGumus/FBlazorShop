@@ -26,10 +26,10 @@ let init id ={ Order = None; Key = 0}, Cmd.ofMsg (OrderLoaded id)
 
 let update remote message (model : Model, commonModel: Common.State) = 
     match message, commonModel.Authentication with
-    | Reload, Some auth -> model, loadPeriodically remote auth.Token (model.Key), Cmd.none
-    | OrderLoaded(key,_) , None -> { model with Key = key }, Cmd.none, Cmd.none
+    | Reload, Common.AuthState.Success auth -> model, loadPeriodically remote auth.Token (model.Key), Cmd.none
+    | OrderLoaded(key,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
     | OrderLoaded (0 , None), _ -> model,Cmd.none, Cmd.none
-    | OrderLoaded (id, order), Some auth -> { Order =  order; Key = id }, loadPeriodically remote auth.Token id, Cmd.none
+    | OrderLoaded (id, order), Common.AuthState.Success auth -> { Order =  order; Key = id }, loadPeriodically remote auth.Token id, Cmd.none
     | _ -> failwith ""
 
 open Bolero.Html

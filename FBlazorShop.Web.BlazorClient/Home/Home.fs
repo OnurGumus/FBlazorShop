@@ -81,10 +81,13 @@ type Cards() =
         forEach model.specials <| fun i -> ecomp<ViewItem, _, _> i dispatch
 
 
-let view model dispatch =
-    cond model.specials <| function
-    | [] -> h2  [] [text "Loading data, please wait..."]
-    | _ ->
+let view (model:Model) dispatch =
+    cond (model |> box |> isNull) <| function
+    | true -> h2  [] [text "Loading data, please wait..."]
+    | _ -> 
+        cond model.specials <| function
+        | [] -> h2  [] [text "Loading data, please wait..."]
+        | _ ->
          let cards = ecomp<Cards, _, _> model dispatch
          let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
          let orderContents = Orders.view model.Order (OrderMsg >> dispatch)
