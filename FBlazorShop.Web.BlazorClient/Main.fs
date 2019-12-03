@@ -31,7 +31,7 @@ and Message=
     | Rendered
     | TokenRead of string
     | TokenNotFound
-    | TokenSaved
+    | TokenSaved of Common.Authentication
     | SignOutRequested
     | SignedOut
     | CommonMessage of Common.Message
@@ -74,7 +74,7 @@ let getToken (jsRuntime : IJSRuntime)  =
     let doWork () = 
         async{ 
             let! res = 
-                jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "name")
+                jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "token")
                     .AsTask() 
                     |> Async.AwaitTask
             
@@ -89,25 +89,25 @@ let signOut (jsRuntime : IJSRuntime)  =
     let doWork () = 
         async{ 
             do! 
-                jsRuntime.InvokeVoidAsync("window.localStorage.removeItem", "name")
+                jsRuntime.InvokeVoidAsync("window.localStorage.removeItem", "token")
                     .AsTask() 
                     |> Async.AwaitTask
             return SignedOut
         }
     Cmd.ofAsync doWork () id raise
 
-let signInCmd (jsRuntime : IJSRuntime) (token : string)  =
+let signInCmd (jsRuntime : IJSRuntime) (token : Common.Authentication)  =
     let doWork () = 
         async{ 
             do! 
-                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "name" , token)
+                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "token" , token.User)
                     .AsTask() 
                     |> Async.AwaitTask
-            return TokenSaved
+            return TokenSaved token
         }
     Cmd.ofAsync doWork () id raise
 
-let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * Cmd<_>=
+let update remote jsRuntime message model =
     let genericUpdate update subModel msg  msgFn pageFn =
         let subModel, cmd = update  msg subModel
         {model with Page = pageFn({ Model = subModel})}, Cmd.map msgFn cmd
@@ -180,13 +180,16 @@ let update remote  (jsRuntime : IJSRuntime) message (model : Model)  : Model * C
         let m , cmd = SignIn.update remote SignIn.SignInRequested model.SignIn
         {model with SignIn = m}, Cmd.map SignInMessage cmd
 
-    | SignInMessage (SignIn.Message.SignInDone c), _ -> 
-        { model with State = { model.State with Authentication = Some c }}, Cmd.batch[ signInCmd jsRuntime c.User; model.BufferedCommand; Cmd.ofMsg(RemoveBuffer)]
+    | SignInMessage (SignIn.Message.SignInDone c), _ ->  model, signInCmd jsRuntime c
 
     | SignInMessage msg, _ -> 
         let m, cmd = SignIn.update remote msg (model.SignIn)
         {model with SignIn = m }, Cmd.map SignInMessage cmd
-    | TokenSaved, _ -> model, Cmd.none
+
+    | TokenSaved t, _ -> 
+     { model with State = { model.State with Authentication = Some t}}, 
+        Cmd.batch[ model.BufferedCommand; Cmd.ofMsg(RemoveBuffer)]
+
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
 open Bolero.Html
