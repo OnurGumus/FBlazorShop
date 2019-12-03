@@ -6,7 +6,9 @@ open FBlazorShop.App
 open FBlazorShop.App.Model
 
 type public PizzaService(ctx: IRemoteContext) =
-       inherit RemoteHandler<BlazorClient.Services.PizzaService>()
+        inherit RemoteHandler<BlazorClient.Services.PizzaService>()
+
+        let extractUser token = token
 
         member private _.GetService<'T>() : 'T = 
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
@@ -26,36 +28,42 @@ type public PizzaService(ctx: IRemoteContext) =
             getSpecials = this.GetItems<PizzaSpecial>()
             getToppings = this.GetItems<Topping>()
             getOrders  = fun token -> 
+                             let user = extractUser token    
                              async{
                                  let! orders = this.GetItems<Order>()() 
-                                 let statuses = orders
-                                 return statuses
+                                 return orders |> List.filter (fun t-> t.UserId = user)
                              }
 
             getOrderWithStatuses = 
                 fun token -> 
+                    let user = extractUser token    
                     async{
-                        let! orders = this.GetItems<Order>()() 
-                        let statuses = orders |> List.map OrderWithStatus.FromOrder
-                        return statuses
+                        let! orders = this.GetItems<Order>()()
+                        return
+                            orders 
+                            |> List.filter (fun t-> t.UserId = user) 
+                            |> List.map OrderWithStatus.FromOrder
                     }
             getOrderWithStatus = 
-                           fun (token,i) -> 
-                               async{
+                            fun (token, i) -> 
+                                let user = extractUser token    
+                                async{
                                     let! orders = this.GetItems<Order>()() 
                                     let status = 
                                         orders 
-                                        |> List.tryFind(fun t -> t.OrderId = i) 
+                                        |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user) 
                                         |> Option.map OrderWithStatus.FromOrder
                                     return status
-                               }
+                                }
             placeOrder = 
-                fun (token,order) -> 
+                fun (token, order) -> 
+                    let user = extractUser token
                     async {
+                        let order = {order with UserId = user }
                         let orderService = this.GetService<IOrderService>()
-                        let! i = order |> orderService.PlaceOrder  |> Async.AwaitTask
-                        return i
+                        return! order |> orderService.PlaceOrder  |> Async.AwaitTask
                     }
+
             signIn = 
                 fun (email, pass) -> 
                     async { 

@@ -5,12 +5,14 @@ open Elmish
 open FBlazorShop.Web.BlazorClient.Services
 open Bolero
 
-type Model = { Order : OrderWithStatus option}
+type Model = { Order : OrderWithStatus option ; Key : int}
 
 
 type Message =
     | OrderLoaded of id :int * OrderWithStatus option
-   // | Initialized of id : int
+    | Reload
+
+let reloadCmd = Cmd.ofMsg Reload
 
 let loadPeriodically remote token id =
     let doWork i = 
@@ -20,13 +22,15 @@ let loadPeriodically remote token id =
     }
     Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun _ -> OrderLoaded(0,None))
 
-let init  id  = { Order = None}, Cmd.ofMsg (OrderLoaded id)
+let init id ={ Order = None; Key = 0}, Cmd.ofMsg (OrderLoaded id)
 
 let update remote message (model : Model, commonModel: Common.State) = 
     match message, commonModel.Authentication with
-    | _ , None-> model, Cmd.none, Cmd.none
+    | Reload, Some auth -> model, loadPeriodically remote auth.Token (model.Key), Cmd.none
+    | OrderLoaded(key,_) , None -> { model with Key = key }, Cmd.none, Cmd.none
     | OrderLoaded (0 , None), _ -> model,Cmd.none, Cmd.none
-    | OrderLoaded (id, order), Some auth -> { Order =  order }, loadPeriodically remote auth.Token id, Cmd.none
+    | OrderLoaded (id, order), Some auth -> { Order =  order; Key = id }, loadPeriodically remote auth.Token id, Cmd.none
+    | _ -> failwith ""
 
 open Bolero.Html
 open FBlazorShop.ComponentsLibrary

@@ -30,6 +30,7 @@ and Message=
     | CheckoutMsg of Checkout.Message
     | Rendered
     | TokenRead of string
+    | TokenSet
     | TokenNotFound
     | TokenSaved of Common.Authentication
     | SignOutRequested
@@ -140,11 +141,13 @@ let update remote jsRuntime message model =
                     User = t; Token = t; TimeStamp = System.DateTime.Now 
                 }
             } 
-        }, Cmd.none
-
+        }, Cmd.ofMsg TokenSet
     | SignOutRequested, _ -> model , signOut jsRuntime
     | SignedOut, _ -> init
     | TokenNotFound , _ -> model, Cmd.none
+    | TokenSet, OrderDetail _ -> 
+        model, OrderDetail.reloadCmd |> Cmd.map OrderDetailMsg
+
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdateWithCommon (MyOrders.update remote) (myOrdersModel.Model) msg MyOrdersMsg MyOrders
    
