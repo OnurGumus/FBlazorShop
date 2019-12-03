@@ -10,22 +10,23 @@ type Model = { Order : OrderWithStatus option}
 
 type Message =
     | OrderLoaded of id :int * OrderWithStatus option
+   // | Initialized of id : int
 
-let loadPeriodically remote id =
+let loadPeriodically remote token id =
     let doWork i = 
         async{ 
             do! Async.Sleep 4000; 
-            return! remote.getOrderWithStatus i 
+            return! remote.getOrderWithStatus (token,i) 
     }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun m -> OrderLoaded(id,None))
+    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun _ -> OrderLoaded(0,None))
 
-let init (remote : PizzaService) id  =
-    { Order = None } , Cmd.ofAsync remote.getOrderWithStatus id (fun m -> OrderLoaded(id,m)) raise
+let init  id  = { Order = None}, Cmd.ofMsg (OrderLoaded id)
 
-let update remote message (model : Model) = 
-    match message with
-    | OrderLoaded (id , None) -> model,Cmd.none
-    | OrderLoaded (id, order) -> { Order =  order }, loadPeriodically remote id
+let update remote message (model : Model, commonModel: Common.State) = 
+    match message, commonModel.Authentication with
+    | _ , None-> model, Cmd.none, Cmd.none
+    | OrderLoaded (0 , None), _ -> model,Cmd.none, Cmd.none
+    | OrderLoaded (id, order), Some auth -> { Order =  order }, loadPeriodically remote auth.Token id, Cmd.none
 
 open Bolero.Html
 open FBlazorShop.ComponentsLibrary

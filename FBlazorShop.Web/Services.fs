@@ -25,17 +25,22 @@ type public PizzaService(ctx: IRemoteContext) =
         
             getSpecials = this.GetItems<PizzaSpecial>()
             getToppings = this.GetItems<Topping>()
-            getOrders = this.GetItems<Order>()
+            getOrders  = fun token -> 
+                             async{
+                                 let! orders = this.GetItems<Order>()() 
+                                 let statuses = orders
+                                 return statuses
+                             }
 
             getOrderWithStatuses = 
-                fun () -> 
+                fun token -> 
                     async{
                         let! orders = this.GetItems<Order>()() 
                         let statuses = orders |> List.map OrderWithStatus.FromOrder
                         return statuses
                     }
             getOrderWithStatus = 
-                           fun i -> 
+                           fun (token,i) -> 
                                async{
                                     let! orders = this.GetItems<Order>()() 
                                     let status = 
@@ -45,7 +50,7 @@ type public PizzaService(ctx: IRemoteContext) =
                                     return status
                                }
             placeOrder = 
-                fun order -> 
+                fun (token,order) -> 
                     async {
                         let orderService = this.GetService<IOrderService>()
                         let! i = order |> orderService.PlaceOrder  |> Async.AwaitTask

@@ -21,6 +21,7 @@ module Program =
         Host.CreateDefaultBuilder(args)
             .ConfigureWebHostDefaults(fun webBuilder ->
                 webBuilder.UseStartup<Startup>() |> ignore
+                webBuilder.UseSetting(WebHostDefaults.DetailedErrorsKey, "true") |> ignore
             )
 
     [<EntryPoint>]

@@ -38,10 +38,10 @@ and Message=
     | SignInMessage of SignIn.Message
     | RemoveBuffer
 
-let defaultPageModel remote = function
+let defaultPageModel remote  = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote |> fst)
-| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init remote key |> fst)
+| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  (key , None)|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
 | Start -> ()
 let router remote = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote)
@@ -52,7 +52,8 @@ let initPage  init (model : Model) msg page =
     { model with Page  = page; }, Cmd.map msg cmd
     
 let initOrderDetail  remote key model = 
-    initPage  (OrderDetail.init remote key) model OrderDetailMsg (fun pageModel -> OrderDetail(key, pageModel))
+    initPage  (OrderDetail.init  (key ,None)) model OrderDetailMsg 
+        (fun pageModel -> OrderDetail(key, pageModel))
 
 let initMyOrders remote  model = 
     initPage  (MyOrders.init remote) model MyOrdersMsg MyOrders
@@ -145,7 +146,7 @@ let update remote jsRuntime message model =
     | SignedOut, _ -> init
     | TokenNotFound , _ -> model, Cmd.none
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
-        genericUpdate MyOrders.update (myOrdersModel.Model) msg MyOrdersMsg MyOrders
+        genericUpdateWithCommon (MyOrders.update remote) (myOrdersModel.Model) msg MyOrdersMsg MyOrders
    
     | HomeMsg (Home.Message.OrderMsg (CheckoutRequested o)),_  -> 
         let orderModel = Checkout.init remote (Some o) |> fst
@@ -156,7 +157,7 @@ let update remote jsRuntime message model =
         genericUpdate (Home.update remote)(homeModel.Model) msg HomeMsg Home
         
     | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
-        let orderModel = OrderDetail.init remote o |> fst
+        let orderModel = OrderDetail.init  (o,None) |> fst
         let init = { Model = orderModel } 
         model, (o,init) |> OrderDetail |> SetPage |> Cmd.ofMsg
 
@@ -169,7 +170,7 @@ let update remote jsRuntime message model =
         model, Cmd.none
 
     | OrderDetailMsg msg, OrderDetail(key, orderModel) ->
-        genericUpdate 
+        genericUpdateWithCommon 
             (OrderDetail.update remote)
             (orderModel.Model)
             msg 

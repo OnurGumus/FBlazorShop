@@ -9,13 +9,16 @@ type Model = { MyOrders : OrderWithStatus list option}
 
 type Message =
     | OrdersLoaded  of OrderWithStatus list
+    | Initialized
 
 let init (remote : PizzaService)  =
-    { MyOrders = None } , Cmd.ofAsync remote.getOrderWithStatuses () OrdersLoaded raise
+    { MyOrders = None } , Cmd.ofMsg Initialized
 
-let update message model = 
-    match message with
-    | OrdersLoaded orders -> { MyOrders = Some orders }, Cmd.none
+let update (remote :PizzaService) message (model , commonState: Common.State) = 
+    match message, commonState.Authentication with
+    | Initialized , Some auth-> model, Cmd.ofAsync remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
+    | OrdersLoaded orders , _ -> { MyOrders = Some orders }, Cmd.none, Cmd.none
+    | _ -> failwith ""
 
 
 open Bolero.Html

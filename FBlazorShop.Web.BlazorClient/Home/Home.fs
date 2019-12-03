@@ -83,7 +83,7 @@ type Cards() =
 
 let view model dispatch =
     cond model.specials <| function
-    | [] -> empty
+    | [] -> h2  [] [text "Loading data, please wait..."]
     | _ ->
          let cards = ecomp<Cards, _, _> model dispatch
          let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)

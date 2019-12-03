@@ -12,7 +12,8 @@
     <DefineConstants></DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>WASM</DefineConstants>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Services.fs" />
