@@ -193,6 +193,7 @@ let update remote jsRuntime message model =
     | TokenSaved t, _ -> 
      { model with State = { model.State with Authentication = Some t}}, 
         Cmd.batch[ model.BufferedCommand; Cmd.ofMsg(RemoveBuffer)]
+    | TokenSet , _ -> model , Cmd.none
 
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
         
