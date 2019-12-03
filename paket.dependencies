@@ -12,7 +12,7 @@ nuget Bolero prerelease
 nuget Bolero.Server prerelease
 nuget Bolero.HotReload.Server prerelease
 nuget Bolero.HotReload prerelease
-nuget Bolero.Build = 0.9.3-preview9
+nuget Bolero.Build prerelease
 nuget Microsoft.AspNetCore.Blazor  = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.Server = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.Build = 3.0.0-preview9.19465.2
