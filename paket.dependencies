@@ -8,15 +8,15 @@ nuget Microsoft.EntityFrameworkCore prerelease
 nuget System.Threading.Tasks
 nuget TaskBuilder.fs
 nuget Microsoft.EntityFrameworkCore.Sqlite prerelease
-nuget Bolero prerelease
-nuget Bolero.Server prerelease
-nuget Bolero.HotReload.Server prerelease
-nuget Bolero.HotReload prerelease
-nuget Bolero.Build prerelease
+nuget Bolero 0.9.3-preview9
+nuget Bolero.Server 0.9.3-preview9
+nuget Bolero.HotReload.Server 0.9.3-preview9
+nuget Bolero.HotReload 0.9.3-preview9
+nuget Bolero.Build  0.9.3-preview9
 nuget Microsoft.AspNetCore.Blazor  = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.Server = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.Build = 3.0.0-preview9.19465.2
 nuget Microsoft.AspNetCore.Blazor.DevServer = 3.0.0-preview9.19465.2
-nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation prerelease
+nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
 nuget JWT
 nuget Newtonsoft.Json

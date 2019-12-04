@@ -19,17 +19,17 @@ type Message =
 
 open Elmish
 
-let init (remote: PizzaService) =
+let init (remote: PizzaService) jsRuntime =
     let pizzaConfigModel, pizzaConfigCmd = PizzaConfig.init remote ()
-    let orderModel, orderCmd = Orders.init()
+    let orderModel, orderCmd = Orders.init jsRuntime
     let pizzaConfigCmd = Cmd.map PizzaConfigMsg pizzaConfigCmd
     let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
-    let cmd = Cmd.batch [ cmd; pizzaConfigCmd; orderCmd ]
+    let cmd = Cmd.batch [ cmd; pizzaConfigCmd; Cmd.map OrderMsg orderCmd  ]
     { specials = []
       PizzaConfig = pizzaConfigModel
       Order = orderModel }, cmd
 
-let update remote message model =
+let update remote jsRuntime message model =
     match message with
     | SpecialsReceived d -> { model with specials = d }, Cmd.none
     | PizzaConfigMsg(ConfigDone p) ->
@@ -41,9 +41,9 @@ let update remote message model =
     | PizzaConfigMsg msg ->
         let pizzaConfigModel, cmd = PizzaConfig.update model.PizzaConfig msg
         { model with PizzaConfig = pizzaConfigModel }, Cmd.map PizzaConfigMsg cmd
-   
+
     | OrderMsg msg ->
-        let orderModel, cmd = Orders.update remote model.Order msg
+        let orderModel, cmd = Orders.update  remote jsRuntime model.Order msg
         { model with Order = orderModel }, Cmd.map OrderMsg cmd
 
 open Bolero
@@ -84,7 +84,7 @@ type Cards() =
 let view (model:Model) dispatch =
     cond (model |> box |> isNull) <| function
     | true -> h2  [] [text "Loading data, please wait..."]
-    | _ -> 
+    | _ ->
         cond model.specials <| function
         | [] -> h2  [] [text "Loading data, please wait..."]
         | _ ->

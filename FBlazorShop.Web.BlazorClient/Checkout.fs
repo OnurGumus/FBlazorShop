@@ -6,10 +6,10 @@ open Elmish
 open FBlazorShop.Web.BlazorClient.Services
 open Bolero
 
-type Model = { 
+type Model = {
     Order : Order option
     CurrentAddress : Address
-    ValidatedAddress : Result<Address,Map<string,string list>> option 
+    ValidatedAddress : Result<Address,Map<string,string list>> option
 }
 
 open Validation
@@ -18,12 +18,12 @@ let validateAddress (address : Address) =
     let cannotBeBlank (validator:Validator<string>) name value =
         validator.Test name value
         |> validator.NotBlank (name + " cannot be blank") |> validator.End
-    all <| fun t -> { 
+    all <| fun t -> {
         Id = 0
         Name = cannotBeBlank t (nameof address.Name) address.Name
         Line1 =  cannotBeBlank t (nameof address.Line1) address.Line1
         Line2 =  cannotBeBlank t (nameof address.Line2) address.Line2
-        City =  cannotBeBlank t (nameof address.City)  address.City 
+        City =  cannotBeBlank t (nameof address.City)  address.City
         Region =  cannotBeBlank t (nameof address.Region) address.Region
         PostalCode =  cannotBeBlank t (nameof address.PostalCode) address.PostalCode
     }
@@ -55,46 +55,46 @@ let update remote message (model : Model, commonState : Common.State) =
         | None  ->
             {model with CurrentAddress = address;}
         | Some _ -> validateModelForAddressForced address
-        
+
     match (message, (model,commonState)) with
-    | SetAddressName value, _ -> 
-      { model.CurrentAddress with Name = value} 
+    | SetAddressName value, _ ->
+      { model.CurrentAddress with Name = value}
       |> validateModelForAddress
       |> noCommand
 
-    | SetAddressCity value, _ -> 
-        { model.CurrentAddress with City = value} 
-        |> validateModelForAddress 
-        |> noCommand
-
-    | SetAddressLine1 value, _ -> 
-        { model.CurrentAddress with Line1 = value} 
-        |> validateModelForAddress 
-        |> noCommand
-
-    | SetAddressLine2 value, _ -> 
-        { model.CurrentAddress with Line2 = value} 
+    | SetAddressCity value, _ ->
+        { model.CurrentAddress with City = value}
         |> validateModelForAddress
         |> noCommand
 
-    | SetAddressPostalCode value, _ -> 
-        { model.CurrentAddress with PostalCode = value} 
+    | SetAddressLine1 value, _ ->
+        { model.CurrentAddress with Line1 = value}
         |> validateModelForAddress
         |> noCommand
-    
-    | SetAddressRegion value, _ -> 
-        { model.CurrentAddress with Region = value} 
+
+    | SetAddressLine2 value, _ ->
+        { model.CurrentAddress with Line2 = value}
         |> validateModelForAddress
         |> noCommand
-          
+
+    | SetAddressPostalCode value, _ ->
+        { model.CurrentAddress with PostalCode = value}
+        |> validateModelForAddress
+        |> noCommand
+
+    | SetAddressRegion value, _ ->
+        { model.CurrentAddress with Region = value}
+        |> validateModelForAddress
+        |> noCommand
+
     | _ , ({ ValidatedAddress = Some(Error _) } ,_) -> model |> noCommand
 
-    | OrderPlaced order, ({ ValidatedAddress = None } , _) -> 
+    | OrderPlaced order, ({ ValidatedAddress = None } , _) ->
         model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
-    | OrderPlaced order, (_, { Authentication = Common.AuthState.Failed}) ->  
+    | OrderPlaced order, (_, { Authentication = Common.AuthState.Failed}) ->
         let c = Cmd.ofMsg(OrderPlaced order)
         model, c, Common.authenticationRequested
-    | OrderPlaced order,(_,{Authentication = Common.AuthState.Success auth}) -> 
+    | OrderPlaced order,(_,{Authentication = Common.AuthState.Success auth}) ->
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd = Cmd.ofAsync remote.placeOrder (auth.Token, order) OrderAccepted raise
         model, cmd, Cmd.none
@@ -106,16 +106,16 @@ open System
 
 type Checkout = Template<"wwwroot\Checkout.html">
 
-let view (model : Model) dispatch = 
+let view (model : Model) dispatch =
     div [ attr.``class`` "main"][
     cond model.Order <| function
-        | Some currentOrder -> 
+        | Some currentOrder ->
             let pd f = Action<_> (fun n -> n |> f |> dispatch)
 
             let address = model.CurrentAddress
             let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedAddress "text"
-            let formItems = 
-                concat [ 
+            let formItems =
+                concat [
                     formFieldItem (nameof address.Name) (address.Name, pd SetAddressName)
                     formFieldItem (nameof address.City) (address.City, pd SetAddressCity)
                     formFieldItem (nameof address.Region) (address.Region, pd SetAddressRegion)
@@ -129,6 +129,6 @@ let view (model : Model) dispatch =
                 .PlaceOrder(fun _ -> dispatch (OrderPlaced currentOrder))
                 .FormFieldItems(formItems)
                 .Elt()
-           
+
         | _ -> text "Loading..."
     ]

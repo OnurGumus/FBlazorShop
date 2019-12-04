@@ -6,21 +6,52 @@ open Bolero.Html
 open FBlazorShop.Web.BlazorClient
 open Services
 open System
+open Microsoft.JSInterop
+open Newtonsoft.Json
 
 type Model = { Order : Order option; }
 
-type OrderMsg = 
+type OrderMsg =
     | PizzaAdded of Pizza
     | PizzaRemoved of int
     | CheckoutRequested of Order
+    | PizzasLoaded of Pizza list
+    | StorageUpdated
 
-let init () = 
-    { Order = None; }, Cmd.none
+let getPizzas (jsRuntime : IJSRuntime)  =
+    let doWork () =
+        async{
+            let! res =
+                jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "pizzas")
+                    .AsTask()
+                    |> Async.AwaitTask
+            return
+                match res with
+                | null -> PizzasLoaded []
+                | t -> t |> JsonConvert.DeserializeObject<Pizza list> |> PizzasLoaded
+        }
+    Cmd.ofAsync doWork () id (fun _ -> PizzasLoaded [])
 
-let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * Cmd<_> = 
+let updatePizzaList (jsRuntime : IJSRuntime)  pizzas =
+    let doWork () =
+        async{
+            let pizzaSer = JsonConvert.SerializeObject(pizzas)
+            do!
+                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "pizzas", pizzaSer)
+                    .AsTask()
+                    |> Async.AwaitTask
+            return StorageUpdated
+        }
+    Cmd.ofAsync doWork () id raise
+let init jsRuntime =
+    { Order = None; }, getPizzas jsRuntime
+
+let update (remote : PizzaService)  (jsRuntime : IJSRuntime) ( state : Model) (msg : OrderMsg) : Model * Cmd<_> =
     match msg with
+    | StorageUpdated -> state, Cmd.none
+    | PizzasLoaded pizzas -> state, Cmd.batch(pizzas |> List.map(PizzaAdded >> Cmd.ofMsg))
     | PizzaAdded p ->
-        let order = 
+        let order =
             match state.Order with
             | Some order -> { order with Pizzas = p :: [yield! order.Pizzas] } |> Some
             | _ ->
@@ -32,24 +63,29 @@ let update (remote : PizzaService) ( state : Model) (msg : OrderMsg) : Model * C
                     DeliveryLocation = { Latitude = 51.5001 ; Longitude = -0.1239}
                     Pizzas = [p]
                 } |> Some
-        { Order = order }, Cmd.none
-    | PizzaRemoved tobeRemoved -> 
-        let pizzas = 
-            [yield! state.Order.Value.Pizzas] 
-            |> List.indexed 
-            |> List.filter (fun (i,_) -> i <> tobeRemoved)  
+
+        { Order = order }, updatePizzaList jsRuntime order.Value.Pizzas
+
+
+    | PizzaRemoved tobeRemoved ->
+        let pizzas =
+            [yield! state.Order.Value.Pizzas]
+            |> List.indexed
+            |> List.filter (fun (i,_) -> i <> tobeRemoved)
             |> List.map snd
 
+        let cmd = updatePizzaList jsRuntime pizzas
         if pizzas.Length = 0 then
-            {state with Order = None}, Cmd.none
+            {state with Order = None}, cmd
         else
         let order =
                 { state.Order.Value with Pizzas = pizzas}
-        { state with Order = Some order}, Cmd.none
+        { state with Order = Some order}, cmd
+
     | CheckoutRequested _ -> invalidOp "should not happen"
 
 let view (state : Model) dispatcher =
-    let noOrder = 
+    let noOrder =
         div [attr.``class`` "empty-cart"] [
             text "Choose a pizza"; br[]; text "to get started"
         ]
@@ -66,15 +102,15 @@ let view (state : Model) dispatcher =
             ]
         ]
 
-    let upper = 
+    let upper =
         cond state.Order <| function
-        | Some o -> 
+        | Some o ->
             cond (o.Pizzas.Length = 0) <| function
             | true -> noOrder
-            | _ -> 
+            | _ ->
                 div [attr.``class`` "order-contents"][
                     h2 [] [text "Your order"]
-                    forEach (o.Pizzas |> Seq.indexed) cartItem 
+                    forEach (o.Pizzas |> Seq.indexed) cartItem
                 ]
         | _ -> noOrder
 
