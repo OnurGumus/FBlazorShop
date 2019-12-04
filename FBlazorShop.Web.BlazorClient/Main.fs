@@ -154,6 +154,7 @@ let update remote jsRuntime message model =
     match message, model.Page with
     | RemoveBuffer, _ -> { model with BufferedCommand = Cmd.none}, Cmd.none
     | Rendered, _ -> model, getToken jsRuntime
+    | SetPage(Checkout _), Start
     | SetPage(Start), _
     | SetPage(Home _), _ -> initHome remote jsRuntime model
     | SetPage(MyOrders _), _
