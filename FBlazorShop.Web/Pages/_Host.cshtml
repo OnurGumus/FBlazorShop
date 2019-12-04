@@ -15,10 +15,13 @@
 </head>
 <body>
     <app>
-        @(await Html.RenderComponentAsync<Main.MyApp>(RenderMode.ServerPrerendered))
+        @{
+        var spec = Seed.specials;
+        }
+        <component type="typeof(Main.MyApp)" render-mode="ServerPrerendered" />
     </app>
     <script type="text/javascript" src="blazor.polyfill.min.js"></script>
-    <!--<script src="_framework/blazor.server.js"></script>-->
+    <script src="_framework/blazor.server.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/FBlazorShop.ComponentsLibrary/localStorage.js"></script>
     <script src="_content/FBlazorShop.ComponentsLibrary/pushNotifications.js"></script>

@@ -8,6 +8,7 @@ open Services
 open Orders
 open Bolero
 open Newtonsoft.Json
+open FBlazorShop.App.Model
 
 type Page =
     | Start
@@ -21,6 +22,7 @@ type Model = {
     State : Common.State
     BufferedCommand : Cmd<Message>
     SignIn : SignIn.Model
+    Specials : PizzaSpecial list
 }
 
 and Message=
@@ -70,11 +72,12 @@ let initHome remote jsrunTime model =
     initPage (Home.init remote jsrunTime) model HomeMsg Home
 
 
-let init =
+let init specials =
     {   Page = Start;
         State  = { Authentication = Common.AuthState.NotTried};
         SignIn = SignIn.init() |> fst
         BufferedCommand = Cmd.none
+        Specials = specials
      }, Cmd.none
 
 
@@ -169,7 +172,7 @@ let update remote jsRuntime message model =
         { model with  State = { Authentication = Common.AuthState.Success t }; }, Cmd.ofMsg TokenSet
     | SignOutRequested, _ -> model , Cmd.batch[ clearOrder jsRuntime;signOut jsRuntime;]
     | SignedOut, _ ->
-        let model, cmd = init
+        let model, cmd = init model.Specials
         {model with State = { Authentication = Common.AuthState.Failed}}, cmd
 
     | TokenNotFound , _ ->
@@ -280,18 +283,22 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
 open System
 open Bolero.Templating.Client
 
+open Microsoft.AspNetCore.Components
+
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
+     [<Parameter>]
+    member val Specials : PizzaSpecial list = [] with get, set
     override this.Program =
         let remote = this.Remote<PizzaService>()
         let update = update  remote (this.JSRuntime)
         let router = router remote (this.JSRuntime)
-        Program.mkProgram (fun _ -> init) (update) (view  this.JSRuntime)
+        Program.mkProgram (fun _ -> init this.Specials) (update) (view  this.JSRuntime)
         |> Program.withRouter router
         |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
         |> Program.withTrace(fun msg model -> System.Console.WriteLine(msg))
-        //|> Program.withConsoleTrace
+        |> Program.withConsoleTrace
         |> Program.withErrorHandler
             (fun (x,y) ->
                 Console.WriteLine("Error Message:" + x)

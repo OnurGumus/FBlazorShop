@@ -82,9 +82,6 @@ type Cards() =
 
 
 let view (model:Model) dispatch =
-    cond (model |> box |> isNull) <| function
-    | true -> h2  [] [text "Loading data, please wait..."]
-    | _ ->
         cond model.specials <| function
         | [] -> h2  [] [text "Loading data, please wait..."]
         | _ ->
