@@ -18,16 +18,16 @@ type Startup() =
         #if DEBUG
             .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient")
         #endif
-            .AddRemoting<Services.PizzaService>() 
-            .AddEF("Data Source=pizza.db") 
+            .AddRemoting<Services.PizzaService>()
+            .AddEF("Data Source=pizza.db")
             .SetupServices()
             .AddMvc()
-            
+
             .AddRazorRuntimeCompilation() |> ignore
-        #if !WASM           
+        #if !WASM
         services.AddServerSideBlazor()|> ignore
         #endif
-        
+
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
     member _.Configure(app: IApplicationBuilder, env: IWebHostEnvironment) =
@@ -43,7 +43,7 @@ type Startup() =
         #if WASM
             .UseClientSideBlazorFiles<FBlazorShop.Web.BlazorClient.Main.Startup>()
         #endif
-            .UseStaticFiles() 
+            .UseStaticFiles()
             .UseEndpoints(fun endpoints ->
 #if !WASM
                 endpoints.MapBlazorHub() |> ignore

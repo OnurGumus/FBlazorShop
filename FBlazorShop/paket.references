@@ -1,3 +1,9 @@
 FSharp.Core
 TaskBuilder.fs
 Microsoft.Extensions.DependencyInjection
+Akka.Cluster.Sharding
+Akkling
+Akka.Persistence.Sqlite
+Akkling.Persistence
+Akkling.Cluster.Sharding
+Akka.Persistence.Query.Sql

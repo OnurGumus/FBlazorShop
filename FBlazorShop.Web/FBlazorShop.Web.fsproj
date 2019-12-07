@@ -18,6 +18,10 @@
     <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="Shared\**" />
+    <EmbeddedResource Remove="Shared\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="Services.fs" />
     <Compile Include="Startup.fs" />
     <Compile Include="Program.fs" />
@@ -32,7 +36,6 @@
     <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Shared\" />
     <Folder Include="wwwroot\_content\FBlazorShop.Web.BlazorClient\" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

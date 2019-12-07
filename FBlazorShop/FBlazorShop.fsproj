@@ -4,6 +4,8 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AkklingHelpers.fs" />
+    <Compile Include="Actor.fs" />
     <Compile Include="OrderService.fs" />
     <Compile Include="Extensions.fs" />
   </ItemGroup>

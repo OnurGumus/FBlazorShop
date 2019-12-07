@@ -56,7 +56,7 @@ let update remote message (model : Model, commonState : Common.State) =
             {model with CurrentAddress = address;}
         | Some _ -> validateModelForAddressForced address
 
-    match (message, (model,commonState)) with
+    match (message, (model,commonState.Authentication)) with
     | SetAddressName value, _ ->
       { model.CurrentAddress with Name = value}
       |> validateModelForAddress
@@ -91,14 +91,14 @@ let update remote message (model : Model, commonState : Common.State) =
 
     | OrderPlaced order, ({ ValidatedAddress = None } , _) ->
         model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
-    | OrderPlaced order, (_, { Authentication = Common.AuthState.Failed}) ->
+    | OrderPlaced order, (_, Common.AuthState.Failed) ->
         let c = Cmd.ofMsg(OrderPlaced order)
         model, c, Common.authenticationRequested
-    | OrderPlaced order,(_,{Authentication = Common.AuthState.Success auth}) ->
+    | OrderPlaced order,(_,Common.AuthState.Success auth) ->
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd = Cmd.ofAsync remote.placeOrder (auth.Token, order) OrderAccepted raise
         model, cmd, Cmd.none
-
+    | _, (_, Common.AuthState.NotTried)
     | OrderAccepted _ , _ -> invalidOp "should not happen"
 
 open Bolero.Html
