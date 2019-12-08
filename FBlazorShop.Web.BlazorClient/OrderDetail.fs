@@ -17,7 +17,7 @@ let reloadCmd = Cmd.ofMsg Reload
 let loadPeriodically remote token id =
     let doWork i =
         async{
-            do! Async.Sleep 400000;
+            do! Async.Sleep 4000;
             return! remote.getOrderWithStatus (token,i)
     }
     Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun _ -> OrderLoaded(0,None))

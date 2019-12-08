@@ -3,6 +3,7 @@
 open System.Collections.Generic
 open System.Linq
 open System
+open Newtonsoft.Json
 
 
 /// <summary>
@@ -42,7 +43,7 @@ type Pizza = {
     Size : int
     Toppings : PizzaTopping list
 }
-with 
+with
     static member DefaultSize = 12
     static member MinimumSize = 9
     static member MaximumSize = 17
@@ -54,16 +55,16 @@ with
 type Address ={
     Id :int
     Name:string
-    Line1 : string 
+    Line1 : string
     Line2 : string
     City : string
     Region : string
     PostalCode : string
 }
 with
-    static member Default = { 
+    static member Default = {
         Id = 0
-        Name = "" 
+        Name = ""
         Line1 = ""
         Line2 = ""
         City = ""
@@ -109,17 +110,17 @@ type Marker = {
 }
 type OrderWithStatus ={
     Order : Order
-    StatusText : string 
+    StatusText : string
     MapMarkers : Marker list
 }
 with
     static member PreparationDuration = TimeSpan.FromSeconds(10.0)
     static member DeliveryDuration = TimeSpan.FromMinutes(1.0)
     static member ToMapMarker description  coords showPopup =
-        { 
+        {
             Description = description
             X = coords.Longitude
-            Y = coords.Latitude; ShowPopup = showPopup 
+            Y = coords.Latitude; ShowPopup = showPopup
         }
 
     static member  ComputeStartPosition( order : Order) =
@@ -127,8 +128,8 @@ with
         let distance = 0.01 + rng.NextDouble() * 0.02
         let angle = rng.NextDouble() * Math.PI * 2.0
         let offset = (distance * Math.Cos(angle)), (distance * Math.Sin(angle))
-        { 
-            Latitude = order.DeliveryLocation.Latitude + (offset |> fst) 
+        {
+            Latitude = order.DeliveryLocation.Latitude + (offset |> fst)
             Longitude = order.DeliveryLocation.Longitude + (offset |> snd)} : LatLong
 
     static member FromOrder (order : Order) =
@@ -139,17 +140,17 @@ with
             elif DateTime.Now < dispatchTime + OrderWithStatus.DeliveryDuration then
                 let startPosition = OrderWithStatus.ComputeStartPosition order
 
-                let proportionOfDeliveryCompleted = 
+                let proportionOfDeliveryCompleted =
                     Math.Min(1.0, (DateTime.Now - dispatchTime).TotalMilliseconds / OrderWithStatus.DeliveryDuration.TotalMilliseconds)
 
                 let driverPosition = LatLong.Interpolate startPosition order.DeliveryLocation proportionOfDeliveryCompleted
 
                 "Out for delivery", [
-                    OrderWithStatus.ToMapMarker "You" order.DeliveryLocation false 
+                    OrderWithStatus.ToMapMarker "You" order.DeliveryLocation false
                     OrderWithStatus.ToMapMarker "Driver" driverPosition true]
-            else 
+            else
                "Delivered", [OrderWithStatus.ToMapMarker "Delivery location" order.DeliveryLocation true]
-        { 
+        {
             Order = order
             StatusText = statusText
             MapMarkers = mapMarkers}

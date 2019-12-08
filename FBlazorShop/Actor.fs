@@ -11,7 +11,42 @@ open Akka.Persistence.Query.Sql
 open Akka.Streams
 open Akka.Persistence.Journal
 open System.Collections.Immutable
+open Newtonsoft.Json.Linq
+open Akkling.Streams
+open Newtonsoft.Json
+open Akka.Actor
+open Akka.Serialization
+open System
+open System.IO
+open System.Text
 
+
+type PlainNewtonsoftJsonSerializer ( system : ExtendedActorSystem) =
+    inherit Serializer(system)
+    let settings =
+        new JsonSerializerSettings(TypeNameHandling = TypeNameHandling.All,
+            MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead)
+    let ser = new JsonSerializer()
+
+    override __.IncludeManifest = true
+
+
+    override __.Identifier = 1711234423;
+
+    override __.ToBinary(o:obj) =
+        ser.TypeNameHandling <- TypeNameHandling.All
+        ser.MetadataPropertyHandling <-MetadataPropertyHandling.ReadAhead
+        let memoryStream = new MemoryStream();
+        use streamWriter = new StreamWriter(memoryStream, Encoding.UTF8)
+        ser.Serialize(streamWriter, o, o.GetType())
+        streamWriter.Flush()
+        memoryStream.ToArray()
+
+    override __.FromBinary(bytes : byte array, ttype : Type) =
+        ser.TypeNameHandling <- TypeNameHandling.All
+        ser.MetadataPropertyHandling <-MetadataPropertyHandling.ReadAhead
+        use streamReader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8)
+        ser.Deserialize(streamReader, ttype)
 
 let configWithPort port =
     let config = Configuration.parse ("""
@@ -19,11 +54,19 @@ let configWithPort port =
             actor {
               provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
               serializers {
-                hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
-              }
-              serialization-bindings {
+              json = "Akka.Serialization.NewtonSoftJsonSerializer"
+              plainnewtonsoft = "Actor+PlainNewtonsoftJsonSerializer, FBlazorShop"
+    }
+    serialization-bindings {
+              "System.Object" = json
+              "Actor+Message, FBlazorShop" = plainnewtonsoft
+    }
+              #serializers {
+               # hyperion = "Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion"
+              #}
+              #serialization-bindings {
                // "System.Object" = hyperion
-              }
+              #}
             }
           remote {
             helios.tcp {
@@ -65,7 +108,7 @@ let configWithPort port =
                   auto-initialize = on
                   event-adapters.tagger = "Actor+Tagger, FBlazorShop"
                   event-adapter-bindings {
-                     "Actor+Message, FBlazorShop" = tagger
+                    "Actor+Message, FBlazorShop" = tagger
                   }
 
               }
@@ -83,6 +126,7 @@ let configWithPort port =
     config.WithFallback(ClusterSingletonManager.DefaultConfig())
 
 type Command = PlaceOrder of Order
+
 type Event = OrderPlaced of Order
 
 type Message =
@@ -91,21 +135,18 @@ type Message =
 
 let deft = ImmutableHashSet.Create("default")
 
-type Tagger () =
+type Tagger  =
     interface IWriteEventAdapter with
         member _.Manifest _ = ""
         member _.ToJournal evt =
-            match evt with
-            | :? Message ->
                 box <| Tagged(evt, deft)
-            | _ -> evt
+    new () = {}
 
 
 let system = System.create "cluster-system" (configWithPort 0)
 Akka.Cluster.Cluster.Get(system).SelfAddress
     |> Akka.Cluster.Cluster.Get(system).Join
 
-System.Threading.Thread.Sleep(2000)
 
 SqlitePersistence.Get(system) |> ignore
 
@@ -113,8 +154,7 @@ let readJournal = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(Sq
 
 let source = readJournal.EventsByTag("default")
 let mat = ActorMaterializer.Create(system);
-System.Threading.Thread.Sleep(2000)
-source.RunForeach((fun e ->System.Console.WriteLine(e)), mat) |> ignore
+
 
 let actorProp (mailbox : Eventsourced<_>)=
   let rec set (state : Order option) =
@@ -124,9 +164,9 @@ let actorProp (mailbox : Eventsourced<_>)=
       | Event (OrderPlaced o) when mailbox.IsRecovering () ->
             return! o |> Some |> set
       | Command(PlaceOrder o) ->
-        return  o |> OrderPlaced |> Event |> Persist
+            return  o |> OrderPlaced |> Event |> Persist
       | Persisted mailbox (Event(OrderPlaced o)) ->
-         return! o |> Some |> set
+            return! o |> Some |> set
       | _ -> invalidOp "not supported"
     }
   set None
@@ -134,11 +174,26 @@ let actorProp (mailbox : Eventsourced<_>)=
 
 
 
-let orderFactory =
+let orderFactory () str =
+
     (AkklingHelpers.entityFactoryFor system "Order"
         <| propsPersist actorProp
-        <| None).RefFor AkklingHelpers.DEFAULT_SHARD
+        <| None).RefFor AkklingHelpers.DEFAULT_SHARD str
 
-let init () =  mat, system
+let init () =
+    let ser = Akka.Serialization.NewtonSoftJsonSerializer(downcast system)
+    let (s:Newtonsoft.Json.JsonSerializer) = downcast ser.Serializer
+    let data = """
+    {"Case":"Event","Fields":[{"Case":"OrderPlaced","Fields":[{"$id":"1","$type":"FBlazorShop.App.Model.Order, FBlazorShop.App","OrderId@":{"$":"I1"},"UserId@":"Onur","CreatedTime@":"2019-12-08T17:48:23.9631859+04:00","DeliveryAddress@":{"$id":"2","$type":"FBlazorShop.App.Model.Address, FBlazorShop.App","Name@":"","Line1@":"","Line2@":"","City@":"","Region@":"","PostalCode@":""},"DeliveryLocation@":{"$id":"3","$type":"FBlazorShop.App.Model.LatLong, FBlazorShop.App","Latitude@":51.5001,"Longitude@":-0.1239},"Pizzas@":{"$type":"Microsoft.FSharp.Collections.FSharpList`1[[FBlazorShop.App.Model.Pizza, FBlazorShop.App]], FSharp.Core","$values":[{"$id":"4","$type":"FBlazorShop.App.Model.Pizza, FBlazorShop.App","Special@":{"$id":"5","$type":"FBlazorShop.App.Model.PizzaSpecial, FBlazorShop.App","Id@":{"$":"I2"},"Name@":"The Baconatorizor","BasePrice@":{"$":"M11.99"},"Description@":"It has EVERY kind of bacon","ImageUrl@":"img/pizzas/bacon.jpg"},"SpecialId@":{"$":"I2"},"Size@":{"$":"I12"},"Toppings@":{"$type":"Microsoft.FSharp.Collections.FSharpList`1[[FBlazorShop.App.Model.PizzaTopping, FBlazorShop.App]], FSharp.Core","$values":[]}}]}}]}]}
+    """
+    let m = JsonConvert.DeserializeObject<Message>(data , ser.Settings)
+
+    System.Threading.Thread.Sleep(100)
+
+    source
+    |> Source.runForEach mat (fun e ->System.Console.WriteLine((e.Event)) )
+    |> Async.StartAsTask
+    |> ignore
+    mat, system
 
 

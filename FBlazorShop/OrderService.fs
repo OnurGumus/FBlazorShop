@@ -16,7 +16,7 @@ type OrderService() =
         member __.PlaceOrder(order: Order): Task<int> =
             let order = { order with OrderId = orders.Count + 1 }
             orders.Add(order)
-            let orderActor = Actor.orderFactory <| sprintf "order-%i" order.OrderId
+            let orderActor = Actor.orderFactory() <| sprintf "order-%i" order.OrderId
             orderActor <! Actor.Command (Actor.PlaceOrder order)
             Task.FromResult (order.OrderId)
 
