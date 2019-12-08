@@ -173,19 +173,14 @@ let actorProp (mailbox : Eventsourced<_>)=
 
 open FSharp.Data.Sql
 
-#if DEBUG
 
 [<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\bin\Debug\netcoreapp3.1"
-#else
-[<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\bin\Release\netcoreapp3.1"
-#endif
-
+let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\net46"
 
 [<Literal>]
 let connectionString =
     @"Data Source=" + __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\pizza.db;"
+
 type Sql =
     SqlDataProvider<
             Common.DatabaseProviderTypes.SQLITE,
@@ -194,23 +189,33 @@ type Sql =
             ResolutionPath = resolutionPath,
             CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>
 
-
-let orderFactory () str =
-
+let orderFactory str =
     (AkklingHelpers.entityFactoryFor system "Order"
         <| propsPersist actorProp
         <| None).RefFor AkklingHelpers.DEFAULT_SHARD str
 
 
-
 let handleEvent (envelop : EventEnvelope) =
     let ctx = Sql.GetDataContext()
-    ctx.Main.Specials|> Seq.iter(fun x -> System.Console.WriteLine(x))
-    ()
+    let order : Message = downcast envelop.Event
+
+    match order with
+    | Event(OrderPlaced o) ->
+        let address =  JsonConvert.SerializeObject(o.DeliveryAddress)
+        let location = JsonConvert.SerializeObject(o.DeliveryLocation)
+        let pizzas = JsonConvert.SerializeObject(o.Pizzas)
+        let createTime =   o.CreatedTime.ToString("o")
+        let userId = o.UserId
+
+        let row  = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
+        row.Id <- o.OrderId |> int64
+        ctx.SubmitUpdates()
+
+    | _ -> ()
+
 let init () =
     System.Threading.Thread.Sleep(100)
-    let ctx = Sql.GetDataContext()
-    ctx.Main.Specials|> Seq.iter(fun x -> System.Console.WriteLine(x))
+
     source
     |> Source.runForEach mat handleEvent
     |> Async.StartAsTask
