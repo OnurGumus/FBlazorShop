@@ -7,3 +7,5 @@ Akka.Persistence.Sqlite
 Akkling.Persistence
 Akkling.Cluster.Sharding
 Akka.Persistence.Query.Sql
+SQLProvider
+SQLitePCLRaw.core

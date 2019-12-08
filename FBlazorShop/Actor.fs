@@ -171,7 +171,28 @@ let actorProp (mailbox : Eventsourced<_>)=
     }
   set None
 
+open FSharp.Data.Sql
 
+#if DEBUG
+
+[<Literal>]
+let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\bin\Debug\netcoreapp3.1"
+#else
+[<Literal>]
+let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\bin\Release\netcoreapp3.1"
+#endif
+
+
+[<Literal>]
+let connectionString =
+    @"Data Source=" + __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\pizza.db;"
+type Sql =
+    SqlDataProvider<
+            Common.DatabaseProviderTypes.SQLITE,
+            SQLiteLibrary = Common.SQLiteLibrary.SystemDataSQLite,
+            ConnectionString = connectionString,
+            ResolutionPath = resolutionPath,
+            CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>
 
 
 let orderFactory () str =
@@ -180,18 +201,18 @@ let orderFactory () str =
         <| propsPersist actorProp
         <| None).RefFor AkklingHelpers.DEFAULT_SHARD str
 
+
+
+let handleEvent (envelop : EventEnvelope) =
+    let ctx = Sql.GetDataContext()
+    ctx.Main.Specials|> Seq.iter(fun x -> System.Console.WriteLine(x))
+    ()
 let init () =
-    let ser = Akka.Serialization.NewtonSoftJsonSerializer(downcast system)
-    let (s:Newtonsoft.Json.JsonSerializer) = downcast ser.Serializer
-    let data = """
-    {"Case":"Event","Fields":[{"Case":"OrderPlaced","Fields":[{"$id":"1","$type":"FBlazorShop.App.Model.Order, FBlazorShop.App","OrderId@":{"$":"I1"},"UserId@":"Onur","CreatedTime@":"2019-12-08T17:48:23.9631859+04:00","DeliveryAddress@":{"$id":"2","$type":"FBlazorShop.App.Model.Address, FBlazorShop.App","Name@":"","Line1@":"","Line2@":"","City@":"","Region@":"","PostalCode@":""},"DeliveryLocation@":{"$id":"3","$type":"FBlazorShop.App.Model.LatLong, FBlazorShop.App","Latitude@":51.5001,"Longitude@":-0.1239},"Pizzas@":{"$type":"Microsoft.FSharp.Collections.FSharpList`1[[FBlazorShop.App.Model.Pizza, FBlazorShop.App]], FSharp.Core","$values":[{"$id":"4","$type":"FBlazorShop.App.Model.Pizza, FBlazorShop.App","Special@":{"$id":"5","$type":"FBlazorShop.App.Model.PizzaSpecial, FBlazorShop.App","Id@":{"$":"I2"},"Name@":"The Baconatorizor","BasePrice@":{"$":"M11.99"},"Description@":"It has EVERY kind of bacon","ImageUrl@":"img/pizzas/bacon.jpg"},"SpecialId@":{"$":"I2"},"Size@":{"$":"I12"},"Toppings@":{"$type":"Microsoft.FSharp.Collections.FSharpList`1[[FBlazorShop.App.Model.PizzaTopping, FBlazorShop.App]], FSharp.Core","$values":[]}}]}}]}]}
-    """
-    let m = JsonConvert.DeserializeObject<Message>(data , ser.Settings)
-
     System.Threading.Thread.Sleep(100)
-
+    let ctx = Sql.GetDataContext()
+    ctx.Main.Specials|> Seq.iter(fun x -> System.Console.WriteLine(x))
     source
-    |> Source.runForEach mat (fun e ->System.Console.WriteLine((e.Event)) )
+    |> Source.runForEach mat handleEvent
     |> Async.StartAsTask
     |> ignore
     mat, system
