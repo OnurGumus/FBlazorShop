@@ -297,3 +297,5 @@ Application/SmartKiosk/DeskoLibs)/
 *.ncrunchsolution
 .vshistory
 .ionide
+.db-shm
+.db-wal

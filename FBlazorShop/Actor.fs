@@ -152,7 +152,7 @@ SqlitePersistence.Get(system) |> ignore
 
 let readJournal = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
-let source = readJournal.EventsByTag("default")
+
 let mat = ActorMaterializer.Create(system);
 
 
@@ -165,7 +165,8 @@ let actorProp (mailbox : Eventsourced<_>)=
             return! o |> Some |> set
       | Command(PlaceOrder o) ->
             return  o |> OrderPlaced |> Event |> Persist
-      | Persisted mailbox (Event(OrderPlaced o)) ->
+      | Persisted mailbox (Event(OrderPlaced o as e)) ->
+            mailbox.Sender() <! e
             return! o |> Some |> set
       | _ -> invalidOp "not supported"
     }
@@ -195,31 +196,50 @@ let orderFactory str =
         <| propsPersist actorProp
         <| None).RefFor AkklingHelpers.DEFAULT_SHARD str
 
+let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
 
+let ser = JsonConvert.SerializeObject
+let deser<'t>  = JsonConvert.DeserializeObject<'t>
 let handleEvent (envelop : EventEnvelope) =
     try
-        let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
         let order : Message = downcast envelop.Event
 
         match order with
         | Event(OrderPlaced o) ->
-            let address =  JsonConvert.SerializeObject(o.DeliveryAddress)
-            let location = JsonConvert.SerializeObject(o.DeliveryLocation)
-            let pizzas = JsonConvert.SerializeObject(o.Pizzas)
-            let createTime =   o.CreatedTime.ToString("o")
+            let address = o.DeliveryAddress |> ser
+            let location = o.DeliveryLocation |> ser
+            let pizzas = o.Pizzas |> ser
+            let createTime = o.CreatedTime.ToString("o")
             let userId = o.UserId
 
-            let row  = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
-            row.Id <- o.OrderId |> int64
+            let row = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
+            row.Id <- o.OrderId.ToString()
+            ctx.Main.Offsets.Individuals.Orders.OffsetCount <- (envelop.Offset :?>Sequence ).Value
             ctx.SubmitUpdates()
 
         | _ -> ()
      with e -> printf "%A" e
 
-let init () =
-    if not System.Environment.Is64BitProcess  then
-        NativeLibrary.Load("net46/SQLite.Interop.dll") |>ignore
+let initOffset  =
+    ctx.Main.Offsets.Individuals.Orders.OffsetCount
 
+
+let orders () =
+    ctx.Main.Orders
+    |> Seq.map(fun x ->
+        {   OrderId = x.Id
+            DeliveryAddress = x.Address |> deser
+            CreatedTime = DateTime.Parse(x.CreatedTime)
+            Pizzas = x.Pizzas |> deser
+            DeliveryLocation = x.DeliveryLocation |> deser
+            UserId = x.UserId
+        } : Order)
+
+
+let init () =
+    if not System.Environment.Is64BitProcess then
+        NativeLibrary.Load("net46/SQLite.Interop.dll") |>ignore
+    let source = readJournal.EventsByTag("default",Offset.Sequence(initOffset))
     System.Threading.Thread.Sleep(100)
     source
     |> Source.runForEach mat handleEvent

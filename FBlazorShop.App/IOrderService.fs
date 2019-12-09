@@ -2,6 +2,7 @@
 
 open System.Threading.Tasks
 open FBlazorShop.App.Model
+open System
 
-type IOrderService = 
-    abstract member PlaceOrder : order : Order -> Task<int>
+type IOrderService =
+    abstract member PlaceOrder : order : Order -> Task<string>

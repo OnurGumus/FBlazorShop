@@ -9,7 +9,7 @@ open System
 
 type Model = { Pizza : Pizza option; Toppings : Topping list }
 
-type PizzaConfigMsg = 
+type PizzaConfigMsg =
     | PizzaConfigRequested of PizzaSpecial
     | SizeUpdated of int
     | ToppingsReceived of Topping list
@@ -19,33 +19,32 @@ type PizzaConfigMsg =
     | ConfirmConfig
     | ConfigDone of Pizza
 
-let init (remote : PizzaService ) () = 
+let init (remote : PizzaService ) () =
     let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
     { Pizza = None; Toppings = [] }, cmd
 
-let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> = 
+let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
     match msg with
-    | PizzaConfigRequested p -> 
-        { state 
-            with Pizza = { 
-                     Id = 0; 
-                     OrderId = 0;  
-                     Special = p; 
-                     SpecialId =p.Id; 
+    | PizzaConfigRequested p ->
+        { state
+            with Pizza = {
+                     Id = 0;
+                     Special = p;
+                     SpecialId =p.Id;
                      Size = Pizza.DefaultSize
-                     Toppings = [] 
-                } |> Some 
+                     Toppings = []
+                } |> Some
         },
         Cmd.none
     | SizeUpdated i ->
         { state with Pizza = { state.Pizza.Value with Size = i } |> Some }, Cmd.none
     | ToppingsReceived toppings -> { state with Toppings = toppings } , Cmd.none
-    | ToppingRemoved removedTopping -> 
+    | ToppingRemoved removedTopping ->
          let pizza = state.Pizza.Value
          let removed = pizza.Toppings |> List.ofSeq |> List.filter (fun t -> t.ToppingId <> removedTopping.ToppingId)
          let pizza = { pizza with Toppings = removed} |> Some
          { state with Pizza = pizza }, Cmd.none
-    | ToppingSelected t -> 
+    | ToppingSelected t ->
         let pizza = state.Pizza.Value
         let topping = state.Toppings.Item t
         let pizzaTopping = { Topping = topping; ToppingId = topping.Id; PizzaId = pizza.Id }
@@ -59,7 +58,7 @@ let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =
 
 open Bolero
 
-let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher = 
+let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
     div [] [
         label [] [ text "Extra Toppings:"]
         let length = toppings.Length
@@ -69,7 +68,7 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
                 option [] [text "(loading...)"]
             ]
         | _ ->
-        cond (pizza.Toppings.Length >= 6) <| function 
+        cond (pizza.Toppings.Length >= 6) <| function
         | true -> div [] [text "(maximum reached)"]
         | _ ->
             select [attr.``class`` "custom-select" ; on.change (fun e -> e.Value |> Convert.ToInt32 |> ToppingSelected |> dispatcher )] [
@@ -82,17 +81,17 @@ type PizzaConfig = Template<"wwwroot\ConfigurePizza.html">
 open System.Collections.Generic
 
 let viewToppingItems (toppings : IReadOnlyList<PizzaTopping> ) dispatcher =
-    forEach toppings (fun t -> 
+    forEach toppings (fun t ->
         PizzaConfig.ToppingItem()
             .Name(t.Topping.Name)
             .FormattedPrice(t.Topping.FormattedBasePrice)
-            .RemoveTopping(fun _ -> 
+            .RemoveTopping(fun _ ->
                 t
                 |> ToppingRemoved
                 |> dispatcher)
             .Elt())
 
-let view (model : Model) dispatcher = 
+let view (model : Model) dispatcher =
     match model.Pizza with
     | Some pizza ->
         let toppings = viewToppings pizza (model.Toppings) dispatcher

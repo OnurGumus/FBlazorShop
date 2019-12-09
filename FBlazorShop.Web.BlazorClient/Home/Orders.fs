@@ -56,7 +56,7 @@ let update (remote : PizzaService)  (jsRuntime : IJSRuntime) ( state : Model) (m
             | Some order -> { order with Pizzas = p :: [yield! order.Pizzas] } |> Some
             | _ ->
                 {
-                    OrderId = 0
+                    OrderId = Guid.NewGuid().ToString()
                     UserId = ""
                     CreatedTime = System.DateTime.Now
                     DeliveryAddress = Address.Default

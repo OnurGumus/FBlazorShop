@@ -24,56 +24,56 @@ type public PizzaService(ctx: IRemoteContext) =
                 .AddClaim(EMAIL, email)
                 .Build()
 
-        let extractUser token = 
-            let json = 
+        let extractUser token =
+            let json =
                 JwtBuilder()
                     .WithSecret(secret)
                     .MustVerifySignature()
-                    .Decode<IDictionary<string, string>>(token); 
+                    .Decode<IDictionary<string, string>>(token);
             json.[EMAIL]
 
-        member private _.GetService<'T>() : 'T = 
+        member private _.GetService<'T>() : 'T =
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
 
         member private this.GetItems<'T>() =
-            fun () -> 
+            fun () ->
                 let repo = this.GetService<IReadOnlyRepo<'T>>()
-                async { 
-                      let! b =  
-                          repo.Queryable 
-                          |> repo.ToListAsync 
-                          |> Async.AwaitTask 
+                async {
+                      let! b =
+                          repo.Queryable
+                          |> repo.ToListAsync
+                          |> Async.AwaitTask
                       return b |> List.ofSeq
                 }
         override this.Handler = {
-        
+
             getSpecials = this.GetItems<PizzaSpecial>()
             getToppings = this.GetItems<Topping>()
-            getOrders  = fun token -> 
-                             let user = extractUser token    
+            getOrders  = fun token ->
+                             let user = extractUser token
                              async{
-                                 let! orders = this.GetItems<Order>()() 
+                                 let! orders = this.GetItems<Order>()()
                                  return orders |> List.filter (fun t-> t.UserId = user)
                              }
 
-            getOrderWithStatuses = 
-                fun token -> 
-                    let user = extractUser token    
+            getOrderWithStatuses =
+                fun token ->
+                    let user = extractUser token
                     async{
                         let! orders = this.GetItems<Order>()()
                         return
-                            orders 
-                            |> List.filter (fun t-> t.UserId = user) 
+                            orders
+                            |> List.filter (fun t-> t.UserId = user)
                             |> List.map OrderWithStatus.FromOrder
                     }
-            getOrderWithStatus = 
-                fun (token, i) -> 
-                    let user = extractUser token    
+            getOrderWithStatus =
+                fun (token, i) ->
+                    let user = extractUser token
                     async {
-                        let! orders = this.GetItems<Order>()() 
-                        let status = 
-                            orders 
-                            |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user) 
+                        let! orders = this.GetItems<Order>()()
+                        let status =
+                            orders
+                            |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user)
                             |> Option.map OrderWithStatus.FromOrder
                         return status
                     }
@@ -83,8 +83,8 @@ type public PizzaService(ctx: IRemoteContext) =
                     let user = extractUser token
                     let token = generateToken user
                     async {  return Ok( { User = user ; Token = token ; TimeStamp = System.DateTime.Now} )}
-            placeOrder = 
-                fun (token, order) -> 
+            placeOrder =
+                fun (token, order) ->
                     let user = extractUser token
                     async {
                         let order = {order with UserId = user }
@@ -92,14 +92,13 @@ type public PizzaService(ctx: IRemoteContext) =
                         return! order |> orderService.PlaceOrder  |> Async.AwaitTask
                     }
 
-            signIn = 
-                fun (email, pass) -> 
-                    async { 
-                        match pass with 
+            signIn =
+                fun (email, pass) ->
+                    async {
+                        match pass with
                         | "Password" ->
                             let token = generateToken email
                             return Ok( { User = email ; Token = token ; TimeStamp = System.DateTime.Now} )
                         | _ -> return Error("Invalid login. Try Password as password")
                     }
         }
-   

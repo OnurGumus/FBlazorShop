@@ -13,6 +13,7 @@ type Model = {
 }
 
 open Validation
+open System
 
 let validateAddress (address : Address) =
     let cannotBeBlank (validator:Validator<string>) name value =
@@ -32,7 +33,7 @@ let validateAddress (address : Address) =
 
 type Message =
     | OrderPlaced of Order : Order
-    | OrderAccepted of orderId : int
+    | OrderAccepted of orderId : string
     | SetAddressName of string
     | SetAddressCity of string
     | SetAddressLine1 of string

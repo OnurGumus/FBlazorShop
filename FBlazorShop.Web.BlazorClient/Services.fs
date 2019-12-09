@@ -3,15 +3,16 @@
 open Bolero.Remoting
 open FBlazorShop.App.Model
 open Common
+open System
 
-type public PizzaService = 
+type public PizzaService =
     {
         getSpecials : unit -> Async<PizzaSpecial list>
         getToppings : unit -> Async<Topping list>
         getOrders : string -> Async<Order list>
         getOrderWithStatuses : string -> Async<OrderWithStatus list>
-        getOrderWithStatus : string * int -> Async<OrderWithStatus option>
-        placeOrder : string * Order -> Async<int>
+        getOrderWithStatus : string * string -> Async<OrderWithStatus option>
+        placeOrder : string * Order -> Async<string>
         signIn : string * string -> Async<Result<Authentication,string>>
         renewToken : string -> Async<Result<Authentication,string>>
     }

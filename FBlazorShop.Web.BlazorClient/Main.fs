@@ -9,11 +9,12 @@ open Orders
 open Bolero
 open Newtonsoft.Json
 open FBlazorShop.App.Model
+open System
 
 type Page =
     | Start
     | [<EndPoint "/">] Home of Model : PageModel<Home.Model>
-    | [<EndPoint "/myOrders/{id}">] OrderDetail of id : int * model : PageModel<OrderDetail.Model>
+    | [<EndPoint "/myOrders/{id}">] OrderDetail of id : string * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
     | [<EndPoint "/checkout">] Checkout of Model : PageModel<Checkout.Model>
 
@@ -48,7 +49,7 @@ and Message=
 let defaultPageModel remote jsRuntime = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote jsRuntime|> fst)
-| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  (key , None)|> fst)
+| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then "" else key ) , None)|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
 | Start -> ()
 let router remote jsRuntime = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote jsRuntime)
@@ -60,7 +61,7 @@ let initPage  init (model : Model) msg page =
 
 let initOrderDetail  remote key model =
     initPage  (OrderDetail.init  (key ,None)) model OrderDetailMsg
-        (fun pageModel -> OrderDetail(key, pageModel))
+        (fun pageModel -> OrderDetail(key.ToString(), pageModel))
 
 let initMyOrders remote  model =
     initPage  (MyOrders.init remote) model MyOrdersMsg MyOrders
@@ -164,7 +165,7 @@ let update remote jsRuntime message model =
         when( model.State.Authentication |> function  Common.AuthState.Failed -> true | _ -> false )->
             {model with BufferedCommand = Cmd.ofMsg(message)}, Cmd.ofMsg(CommonMessage Common.AuthenticationRequested)
     | SetPage(MyOrders _), _ -> initMyOrders remote model
-    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote key model
+    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote (key) model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order
     | TokenRead t , _ ->  model, renewTokenCmd remote t.Token
@@ -196,7 +197,7 @@ let update remote jsRuntime message model =
     | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
         let orderModel = OrderDetail.init  (o,None) |> fst
         let init = { Model = orderModel }
-        model, Cmd.batch[ (o,init) |> OrderDetail |> SetPage |> Cmd.ofMsg ; clearOrder jsRuntime]
+        model, Cmd.batch[ (o.ToString(),init) |> OrderDetail |> SetPage |> Cmd.ofMsg ; clearOrder jsRuntime]
 
     | CheckoutMsg msg, Checkout model ->
         let u = Checkout.update remote

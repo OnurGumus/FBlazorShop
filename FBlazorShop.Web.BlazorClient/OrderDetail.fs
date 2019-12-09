@@ -4,12 +4,13 @@ open FBlazorShop.App.Model
 open Elmish
 open FBlazorShop.Web.BlazorClient.Services
 open Bolero
+open System
 
-type Model = { Order : OrderWithStatus option ; Key : int}
+type Model = { Order : OrderWithStatus option ; Key : string}
 
 
 type Message =
-    | OrderLoaded of id :int * OrderWithStatus option
+    | OrderLoaded of id :string  * OrderWithStatus option
     | Reload
 
 let reloadCmd = Cmd.ofMsg Reload
@@ -20,15 +21,15 @@ let loadPeriodically remote token id =
             do! Async.Sleep 4000;
             return! remote.getOrderWithStatus (token,i)
     }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id,m)) (fun _ -> OrderLoaded(0,None))
+    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,m)) (fun _ -> OrderLoaded("",None))
 
-let init id ={ Order = None; Key = 0}, Cmd.ofMsg (OrderLoaded id)
+let init id ={ Order = None; Key = ""}, Cmd.ofMsg (OrderLoaded id)
 
 let update remote message (model : Model, commonModel: Common.State) =
     match message, commonModel.Authentication with
     | Reload, Common.AuthState.Success auth -> model, loadPeriodically remote auth.Token (model.Key), Cmd.none
     | OrderLoaded(key,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
-    | OrderLoaded (0 , None), _ -> model,Cmd.none, Cmd.none
+    | OrderLoaded ("", None), _  -> model,Cmd.none, Cmd.none
     | OrderLoaded (id, order), Common.AuthState.Success auth -> { Order =  order; Key = id }, loadPeriodically remote auth.Token id, Cmd.none
     | _ -> failwith ""
 

@@ -37,7 +37,6 @@ type PizzaTopping = {
 [<CLIMutable>]
 type Pizza = {
     Id : int
-    OrderId : int
     Special : PizzaSpecial
     SpecialId : int
     Size : int
@@ -83,7 +82,7 @@ with static member  Interpolate (start : LatLong) (endd : LatLong)  proportion =
 
 [<CLIMutable>]
 type Order = {
-    OrderId : int
+    OrderId : string
     UserId : string
     CreatedTime : DateTime
     DeliveryAddress : Address
@@ -124,7 +123,7 @@ with
         }
 
     static member  ComputeStartPosition( order : Order) =
-        let rng = Random(order.OrderId)
+        let rng = Random(order.OrderId.GetHashCode())
         let distance = 0.01 + rng.NextDouble() * 0.02
         let angle = rng.NextDouble() * Math.PI * 2.0
         let offset = (distance * Math.Cos(angle)), (distance * Math.Sin(angle))
