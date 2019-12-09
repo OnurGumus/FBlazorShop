@@ -299,3 +299,4 @@ Application/SmartKiosk/DeskoLibs)/
 .ionide
 .db-shm
 .db-wal
+*.db-wal
