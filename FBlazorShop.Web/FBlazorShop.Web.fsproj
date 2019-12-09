@@ -55,10 +55,10 @@
     <None Include="net46\SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <None Include="SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest"  Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="net46\SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <None Include="net46\SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest"  Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="pizza.db">

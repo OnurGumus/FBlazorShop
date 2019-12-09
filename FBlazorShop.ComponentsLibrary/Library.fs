@@ -16,9 +16,8 @@ type Map() =
 
     [<Parameter>]
     member val Markers = [] : FBlazorShop.App.Model.Marker list with get, set
-    override __.Render() = 
+    override __.Render() =
         div [attr.id elementId; attr.style "height: 100%; width: 100%;"][]
 
-    override this.OnAfterRenderAsync _ = 
+    override this.OnAfterRenderAsync _ =
         this.JSRuntime.InvokeVoidAsync("deliveryMap.showOrUpdate", elementId, (this.Markers)).AsTask()
-        

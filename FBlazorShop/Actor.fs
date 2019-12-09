@@ -196,6 +196,10 @@ let orderFactory str =
         <| propsPersist actorProp
         <| None).RefFor AkklingHelpers.DEFAULT_SHARD str
 
+if not System.Environment.Is64BitProcess then
+    let path2 = System.Environment.CurrentDirectory
+    NativeLibrary.Load(Path.Combine(path2, @"net46\SQLite.Interop.dll")) |>ignore
+
 let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
 
 let ser = JsonConvert.SerializeObject
@@ -237,8 +241,6 @@ let orders () =
 
 
 let init () =
-    if not System.Environment.Is64BitProcess then
-        NativeLibrary.Load("net46/SQLite.Interop.dll") |>ignore
     let source = readJournal.EventsByTag("default",Offset.Sequence(initOffset))
     System.Threading.Thread.Sleep(100)
     source
