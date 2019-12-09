@@ -172,6 +172,7 @@ let actorProp (mailbox : Eventsourced<_>)=
   set None
 
 open FSharp.Data.Sql
+open System.Runtime.InteropServices
 
 
 [<Literal>]
@@ -196,26 +197,30 @@ let orderFactory str =
 
 
 let handleEvent (envelop : EventEnvelope) =
-    let ctx = Sql.GetDataContext()
-    let order : Message = downcast envelop.Event
+    try
+        let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
+        let order : Message = downcast envelop.Event
 
-    match order with
-    | Event(OrderPlaced o) ->
-        let address =  JsonConvert.SerializeObject(o.DeliveryAddress)
-        let location = JsonConvert.SerializeObject(o.DeliveryLocation)
-        let pizzas = JsonConvert.SerializeObject(o.Pizzas)
-        let createTime =   o.CreatedTime.ToString("o")
-        let userId = o.UserId
+        match order with
+        | Event(OrderPlaced o) ->
+            let address =  JsonConvert.SerializeObject(o.DeliveryAddress)
+            let location = JsonConvert.SerializeObject(o.DeliveryLocation)
+            let pizzas = JsonConvert.SerializeObject(o.Pizzas)
+            let createTime =   o.CreatedTime.ToString("o")
+            let userId = o.UserId
 
-        let row  = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
-        row.Id <- o.OrderId |> int64
-        ctx.SubmitUpdates()
+            let row  = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
+            row.Id <- o.OrderId |> int64
+            ctx.SubmitUpdates()
 
-    | _ -> ()
+        | _ -> ()
+     with e -> printf "%A" e
 
 let init () =
-    System.Threading.Thread.Sleep(100)
+    if not System.Environment.Is64BitProcess  then
+        NativeLibrary.Load("net46/SQLite.Interop.dll") |>ignore
 
+    System.Threading.Thread.Sleep(100)
     source
     |> Source.runForEach mat handleEvent
     |> Async.StartAsTask
