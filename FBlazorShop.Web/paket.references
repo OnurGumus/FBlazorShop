@@ -11,3 +11,4 @@ JWT
 Akka.Cluster.Sharding
 Akkling
 Akka.Persistence.Sqlite
+System.Data.SQLite.Core

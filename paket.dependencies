@@ -28,3 +28,4 @@ nuget Akkling.Cluster.Sharding prerelease
 nuget Akka.Persistence.Query.Sql prerelease
 nuget SQLProvider
 nuget SQLitePCLRaw.core
+nuget System.Data.SQLite.Core
