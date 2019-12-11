@@ -80,16 +80,19 @@ type Cards() =
     override __.View model dispatch =
         forEach model.specials <| fun i -> ecomp<ViewItem, _, _> i dispatch
 
+type HomeView() =
+    inherit ElmishComponent<Model, Message>()
+    override _.View model dispatch =
+      cond model.specials <| function
+      | [] -> h2  [] [text "Loading data, please wait..."]
+      | _ ->
+       let cards = ecomp<Cards, _, _> model dispatch
+       let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
+       let orderContents = Orders.view model.Order (OrderMsg >> dispatch)
+       PizzaCards()
+           .Items(cards)
+           .OrderContents(orderContents)
+           .PizzaConfig(pizzaconfig)
+           .Elt()
+let view (model:Model) dispatch = ecomp<HomeView,_,_> model dispatch
 
-let view (model:Model) dispatch =
-        cond model.specials <| function
-        | [] -> h2  [] [text "Loading data, please wait..."]
-        | _ ->
-         let cards = ecomp<Cards, _, _> model dispatch
-         let pizzaconfig = PizzaConfig.view model.PizzaConfig (PizzaConfigMsg >> dispatch)
-         let orderContents = Orders.view model.Order (OrderMsg >> dispatch)
-         PizzaCards()
-             .Items(cards)
-             .OrderContents(orderContents)
-             .PizzaConfig(pizzaconfig)
-             .Elt()

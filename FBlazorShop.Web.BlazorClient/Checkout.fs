@@ -10,6 +10,7 @@ type Model = {
     Order : Order option
     CurrentAddress : Address
     ValidatedAddress : Result<Address,Map<string,string list>> option
+    Focus : string option
 }
 
 open Validation
@@ -40,9 +41,10 @@ type Message =
     | SetAddressLine2 of string
     | SetAddressRegion of string
     | SetAddressPostalCode of string
+    | Focused of  string
 
 let init (_ : PizzaService) (order : Order option)  =
-    { Order =  order ; CurrentAddress = Address.Default; ValidatedAddress = None } , Cmd.none
+    { Order =  order ; CurrentAddress = Address.Default; ValidatedAddress = None ; Focus = None} , Cmd.none
 
 let noCommand state =  state, Cmd.none, Cmd.none
 let update remote message (model : Model, commonState : Common.State) =
@@ -58,6 +60,7 @@ let update remote message (model : Model, commonState : Common.State) =
         | Some _ -> validateModelForAddressForced address
 
     match (message, (model,commonState.Authentication)) with
+    | Focused field, _ -> { model with Focus = Some field} |> noCommand
     | SetAddressName value, _ ->
       { model.CurrentAddress with Name = value}
       |> validateModelForAddress
@@ -112,9 +115,9 @@ let view (model : Model) dispatch =
     cond model.Order <| function
         | Some currentOrder ->
             let pd f = Action<_> (fun n -> n |> f |> dispatch)
-
+            let focused = (fun name -> Action<_>(fun _ -> dispatch (Focused name)))
             let address = model.CurrentAddress
-            let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedAddress "text"
+            let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedAddress model.Focus focused  "text"
             let formItems =
                 concat [
                     formFieldItem (nameof address.Name) (address.Name, pd SetAddressName)

@@ -237,6 +237,23 @@ open BoleroHelpers
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
 
+type LoginDisplay() =
+    inherit ElmishComponent<Common.AuthState, Message>()
+    override _.View model dispatch =
+        cond model <| function
+                | Common.AuthState.NotTried | Common.AuthState.Failed->
+                    a [attr.``class`` "sign-in";
+                        on.click(fun _ ->  CommonMessage (Common.Message.AuthenticationRequested) |> dispatch)]
+                        [text "Sign in"]
+                | Common.AuthState.Success {User = user} ->
+                    concat [
+                        img [attr.src ("img/user.svg" |> prependContent)]
+                        div [] [
+                            span [attr.``class`` "username"] [text user]
+                            a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
+                        ]
+                   ]
+
 let view  (js: IJSRuntime) ( model : Model) dispatch =
     let content =
         cond model.Page <| function
@@ -247,20 +264,8 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         | Checkout m -> Checkout.view m.Model (CheckoutMsg >> dispatch)
         | Start -> h2 [] [text "Loading ..."]
 
-    let loginDisplay =
-        cond model.State.Authentication <| function
-        | Common.AuthState.NotTried | Common.AuthState.Failed->
-            a [attr.``class`` "sign-in";
-                on.click(fun _ ->  CommonMessage (Common.Message.AuthenticationRequested) |> dispatch)]
-                [text "Sign in"]
-        | Common.AuthState.Success {User = user} ->
-            concat [
-                img [attr.src ("img/user.svg" |> prependContent)]
-                div [] [
-                    span [attr.``class`` "username"] [text user]
-                    a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
-                ]
-           ]
+    let loginDisplay = ecomp<LoginDisplay,_,_> model.State.Authentication dispatch
+
     let signIn = SignIn.view model.SignIn (SignInMessage >> dispatch  )
 
     MainLayout()

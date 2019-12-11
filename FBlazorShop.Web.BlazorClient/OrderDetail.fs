@@ -39,15 +39,21 @@ let map  markers =
         comp<Map> ["Zoom" => 13.0; "Markers" => markers ] []
 
 type OrderDetail = Template<"wwwroot\OrderDetail.html">
-let view (model : Model) dispatch =
-    div [ attr.``class`` "main"][
-    cond model.Order <| function
-        | Some x ->
-            OrderDetail()
-                .OrderCreatedTimeToLongDateString(x.Order.CreatedTime.ToLongDateString())
-                .StatusText(x.StatusText)
-                .OrderReview(OrderReview.view x.Order dispatch)
-                .Map(map (x.MapMarkers)) .Elt()
 
-        | _ -> text "Loading..."
-    ]
+
+type OrderDetailView() =
+    inherit ElmishComponent<Model, Message>()
+    override _.View model dispatch =
+       div [ attr.``class`` "main"][
+          cond model.Order <| function
+              | Some x ->
+                  OrderDetail()
+                      .OrderCreatedTimeToLongDateString(x.Order.CreatedTime.ToLongDateString())
+                      .StatusText(x.StatusText)
+                      .OrderReview(OrderReview.view x.Order dispatch)
+                      .Map(map (x.MapMarkers)) .Elt()
+
+              | _ -> text "Loading..."
+          ]
+let view (model : Model) dispatch = ecomp<OrderDetailView,_,_> model dispatch
+

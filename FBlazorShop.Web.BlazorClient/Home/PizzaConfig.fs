@@ -91,23 +91,26 @@ let viewToppingItems (toppings : IReadOnlyList<PizzaTopping> ) dispatcher =
                 |> dispatcher)
             .Elt())
 
-let view (model : Model) dispatcher =
-    match model.Pizza with
-    | Some pizza ->
-        let toppings = viewToppings pizza (model.Toppings) dispatcher
-        let toppingItems = viewToppingItems pizza.Toppings dispatcher
-        PizzaConfig()
-            .ToppingItems(toppingItems)
-            .ToppingCombo(toppings)
-            .SpecialName(pizza.Special.Name)
-            .FormattedTotalPrice(pizza.FormattedTotalPrice)
-            .SpecialDescription(pizza.Special.Description)
-            .MaximumSize(Pizza.MaximumSize)
-            .MinimumSize(Pizza.MinimumSize)
-            .Size(pizza.Size.ToString())
-            .SizeN(pizza.Size.ToString(), fun i ->  SizeUpdated (System.Int32.Parse (i)) |> dispatcher)
-            .Cancel(fun _ -> Cancel |> dispatcher)
-            .Confirm(fun _ -> ConfirmConfig  |> dispatcher)
-            .Elt()
-    | _ -> empty
+type PizzaConfigView() =
+    inherit ElmishComponent<Model, PizzaConfigMsg>()
+    override _.View model dispatcher =
+       match model.Pizza with
+       | Some pizza ->
+           let toppings = viewToppings pizza (model.Toppings) dispatcher
+           let toppingItems = viewToppingItems pizza.Toppings dispatcher
+           PizzaConfig()
+               .ToppingItems(toppingItems)
+               .ToppingCombo(toppings)
+               .SpecialName(pizza.Special.Name)
+               .FormattedTotalPrice(pizza.FormattedTotalPrice)
+               .SpecialDescription(pizza.Special.Description)
+               .MaximumSize(Pizza.MaximumSize)
+               .MinimumSize(Pizza.MinimumSize)
+               .Size(pizza.Size.ToString())
+               .SizeN(pizza.Size.ToString(), fun i ->  SizeUpdated (System.Int32.Parse (i)) |> dispatcher)
+               .Cancel(fun _ -> Cancel |> dispatcher)
+               .Confirm(fun _ -> ConfirmConfig  |> dispatcher)
+               .Elt()
+       | _ -> empty
 
+let view (model : Model) dispatcher = ecomp<PizzaConfigView,_,_> model dispatcher

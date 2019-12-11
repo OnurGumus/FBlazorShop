@@ -11,19 +11,21 @@ let assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().N
 let prependContent url =
     sprintf "_content/%s/%s" assemblyName url
 
-let errorAndClass name (result:Result<_,Map<string, string list>> option) = 
-      match result with
-      | Some (Error e) when (e.ContainsKey name && e.[name] <> []) -> System.String.Join(",", e.[name]), "invalid"
-      | Some _ -> "", "modified valid"
-      | None -> "",""
+let errorAndClass name onFocus (result:Result<_,Map<_,_>> option) =
+      match result, onFocus with
+      | _ , Some focus when focus = name -> "",""
+      | Some (Error e), _ when (e.ContainsKey name && e.[name] <> []) -> System.String.Join(",", e.[name]), "invalid"
+      | Some _, _ -> "", "modified valid"
+      | _ -> "",""
 
 type FormField = Template<"wwwroot\FormField.html">
-let formFieldItem  item fieldType (name : string)  value =
-      let error, validClass = errorAndClass name item
+let formFieldItem  item onFocus focusMessage fieldType name value =
+      let error, validClass = errorAndClass name onFocus item
       FormField()
           .Label(name)
           .Type(fieldType)
           .ValidClass(validClass)
+          .OnFocused(focusMessage name)
           .Value(value)
           .Error(error)
           .Elt()
