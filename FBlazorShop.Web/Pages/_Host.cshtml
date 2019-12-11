@@ -14,6 +14,47 @@
     <link href="_content/FBlazorShop.ComponentsLibrary/leaflet/leaflet.css" rel="stylesheet" />
 </head>
 <body>
+    <script>
+        window.exampleJsFunctions = {
+            confirmButton: null,
+            cancelButton: null,
+            onkeyUp: function (event) {
+                if (event.key == "Escape") document.getElementById("cancelButton").click();
+                else if (event.key == "Enter")  document.getElementById("confirmButton").click();
+            },
+            registerForOnKeyUp: function (s) {
+                this.onkeyUpParam = s;
+                console.log("adding key biniding ");
+                document.addEventListener("keyup", this.onkeyUp)
+            },
+            removeOnKeyUp: function () {
+                console.log("removing key biniding");
+                document.removeEventListener("keyup", this.onkeyUp);
+            },
+            showPrompt: function (text) {
+                return prompt(text, 'Type your name here');
+            },
+            displayWelcome: function (welcomeMessage) {
+                document.getElementById('welcome').innerText = welcomeMessage;
+            },
+            returnArrayAsyncJs: function () {
+                console.log("onur");
+                DotNet.invokeMethodAsync('FBlazorShop.Web.BlazorClient', 'ReturnArrayAsync')
+                  .then(data => {
+                    data.push(4);
+                      console.log(data);
+                });
+            },
+            sayHello: function (dotnetHelper) {
+                console.log(dotnetHelper);
+                 DotNet.invokeMethodAsync('FBlazorShop.Web.BlazorClient', 'ReturnArrayAsync', dotnetHelper)
+                //return dotnetHelper.invokeMethodAsync('SayHello')
+                //    .then(r => console.log(r));
+            }
+        };
+    </script>
+
+    <button style="" onclick="window.exampleJsFunctions.returnArrayAsyncJs()">Tasfdddddddddddddddddddddddddddddddddddddddddddddest</button>
     <app>
         @{
         var spec = Seed.specials;

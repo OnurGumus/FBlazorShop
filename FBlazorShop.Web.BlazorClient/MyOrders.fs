@@ -8,7 +8,7 @@ open Bolero
 type Model = { MyOrders : OrderWithStatus list option}
 
 type Message =
-    | OrdersLoaded  of OrderWithStatus list
+    | OrdersLoaded of OrderWithStatus list
     | Initialized
     | Reload
 
@@ -17,9 +17,9 @@ let reloadCmd = Cmd.ofMsg Reload
 let init (remote : PizzaService)  =
     { MyOrders = None } , Cmd.ofMsg Initialized
 
-let update (remote :PizzaService) message (model , commonState: Common.State) = 
+let update (remote :PizzaService) message (model , commonState: Common.State) =
     match message, commonState.Authentication with
-    | Reload , Common.AuthState.Success auth 
+    | Reload , Common.AuthState.Success auth
     | Initialized , Common.AuthState.Success auth-> model, Cmd.ofAsync remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
     | OrdersLoaded orders , _ -> { MyOrders = Some orders }, Cmd.none, Cmd.none
     | _ , Common.AuthState.NotTried -> model, Cmd.none, Cmd.none
@@ -34,12 +34,12 @@ let view (model : Model) dispatch =
         div [attr.``class`` "main"][
             cond model.MyOrders <| function
                 | None -> text "Loading..."
-                | Some [] -> 
+                | Some [] ->
                     concat[
                         h2 [] [ text "No orders placed"]
                         a [attr.href ""; attr.``class`` "btn btn-success"][ text "Order some pizza"]
                     ]
-                | Some orders -> 
+                | Some orders ->
                     let viewOrder (s: OrderWithStatus) =
                         OrderList.OrderItem()
                             .OrderCreatedTime(s.Order.CreatedTime.ToLongDateString())

@@ -87,7 +87,30 @@ let update remote message (model : Model) =
 
 open Bolero.Html
 open System
-let view (model : Model) (dispatch : _ -> unit) =
+
+open Microsoft.AspNetCore.Components
+open Microsoft.JSInterop
+
+type MyComponent() =
+    inherit Component()
+    interface IDisposable with
+        member this.Dispose () =
+            this.JsRunTime.InvokeVoidAsync("exampleJsFunctions.removeOnKeyUp") |> ignore
+
+    [<Parameter>]
+    member val JsRunTime : IJSRuntime = Unchecked.defaultof<_> with get, set
+    override this.Render() = empty
+    override this.OnAfterRenderAsync firstTime =
+        async{
+            if firstTime then
+                return!
+                    this.JsRunTime.InvokeVoidAsync("exampleJsFunctions.registerForOnKeyUp", "boo").AsTask()
+                    |> Async.AwaitTask
+            else
+                return ()
+        } |> Async.StartImmediateAsTask :> _
+
+let view jsRuntime (model : Model) (dispatch : _ -> unit) =
     cond model.IsSigningIn <| function
     | true ->
         let login = model.CurrentLogin
@@ -96,6 +119,7 @@ let view (model : Model) (dispatch : _ -> unit) =
         let pd name = Action<string> (fun v -> dispatch (SetFormField(name,v )))
         let formItems =
             concat [
+                comp<MyComponent> ["JsRunTime" => jsRuntime] []
                 formFieldItem "text" (nameof login.Email) (login.Email, pd (nameof login.Email))
                 formFieldItem "password" (nameof login.Password) (login.Password, pd (nameof login.Password))
             ]

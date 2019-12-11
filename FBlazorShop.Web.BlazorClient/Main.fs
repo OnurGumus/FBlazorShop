@@ -266,7 +266,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
 
     let loginDisplay = ecomp<LoginDisplay,_,_> model.State.Authentication dispatch
 
-    let signIn = SignIn.view model.SignIn (SignInMessage >> dispatch  )
+    let signIn = SignIn.view js model.SignIn (SignInMessage >> dispatch  )
 
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All
@@ -293,13 +293,36 @@ open Microsoft.AspNetCore.Components
 
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
-     [<Parameter>]
+
+    let  dispatch =
+        typeof<MyApp>
+            .GetProperty("Dispatch", Reflection.BindingFlags.Instance ||| Reflection.BindingFlags.NonPublic)
+
+    static let mutable dispatcher: (Message -> unit) = Unchecked.defaultof<_>
+
+    [<Parameter>]
     member val Specials : PizzaSpecial list = [] with get, set
+
+    [<JSInvokable>]
+    static member  ReturnArrayAsync(message: obj) =
+        Console.WriteLine(message)
+        System.Threading.Tasks.Task.FromResult([| 1; 2; 3 |]);
+
+
+    override this.OnAfterRenderAsync(firstRender) =
+        let res = base.OnAfterRenderAsync(firstRender) |> Async.AwaitTask
+        async{
+            if firstRender then
+                do! this.JSRuntime.InvokeAsync("exampleJsFunctions.sayHello", "hello").AsTask() |> Async.AwaitTask
+                dispatcher <- downcast dispatch.GetValue(this)
+            return res
+         }|> Async.StartImmediateAsTask :> _
+
     override this.Program =
         let remote = this.Remote<PizzaService>()
-        let update = update  remote (this.JSRuntime)
+        let update = update remote (this.JSRuntime)
         let router = router remote (this.JSRuntime)
-        Program.mkProgram (fun _ -> init this.Specials) (update) (view  this.JSRuntime)
+        Program.mkProgram (fun _ -> init this.Specials) (update) (view this.JSRuntime)
         |> Program.withRouter router
         |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
