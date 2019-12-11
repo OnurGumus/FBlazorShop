@@ -7,12 +7,13 @@ open FBlazorShop.App.Model
 open System.Collections.Generic
 open System.Linq
 open Akkling
-open Domain
+open Domain.Order
+
 type OrderService() =
     interface IOrderService with
         member __.PlaceOrder(order: Order): Task<string> =
             async {
-                let orderActor = orderFactory <| sprintf "order-%s"  (order.OrderId.ToString())
+                let orderActor = factory <| sprintf "order-%s"  (order.OrderId.ToString())
                 let! res = orderActor <? ( order |> PlaceOrder  |> Command)
 
                 match res with

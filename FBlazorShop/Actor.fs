@@ -54,7 +54,7 @@ let configWithPort port =
                 }
                 serialization-bindings {
                     "System.Object" = json
-                    "Domain+Message, FBlazorShop" = plainnewtonsoft
+                    "Domain+Order+Message, FBlazorShop" = plainnewtonsoft
                 }
             }
             remote {
@@ -96,7 +96,7 @@ let configWithPort port =
                       auto-initialize = on
                       event-adapters.tagger = "Actor+Tagger, FBlazorShop"
                       event-adapter-bindings {
-                        "Domain+Message, FBlazorShop" = tagger
+                        "Domain+Order+Message, FBlazorShop" = tagger
                       }
 
                   }

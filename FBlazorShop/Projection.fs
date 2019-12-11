@@ -9,21 +9,23 @@ let deser<'t>  = JsonConvert.DeserializeObject<'t>
 
 let handleEvent (envelop : EventEnvelope) =
     try
-        let order : Message = downcast envelop.Event
+        match envelop.Event with
+        | :? Order.Message as order ->
 
-        match order with
-        | Event(OrderPlaced o) ->
-            let address = o.DeliveryAddress |> ser
-            let location = o.DeliveryLocation |> ser
-            let pizzas = o.Pizzas |> ser
-            let createTime = o.CreatedTime.ToString("o")
-            let userId = o.UserId
+            match order with
+            | Order.Event(Order.OrderPlaced o) ->
+                let address = o.DeliveryAddress |> ser
+                let location = o.DeliveryLocation |> ser
+                let pizzas = o.Pizzas |> ser
+                let createTime = o.CreatedTime.ToString("o")
+                let userId = o.UserId
 
-            let row = Actor.ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
-            row.Id <- o.OrderId.ToString()
-            Actor.ctx.Main.Offsets.Individuals.Orders.OffsetCount
-                <- (envelop.Offset :?>Sequence ).Value
-            Actor.ctx.SubmitUpdates()
+                let row = Actor.ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
+                row.Id <- o.OrderId.ToString()
+                Actor.ctx.Main.Offsets.Individuals.Orders.OffsetCount
+                    <- (envelop.Offset :?>Sequence ).Value
+                Actor.ctx.SubmitUpdates()
+            | _ -> ()
 
         | _ -> ()
      with e -> printf "%A" e
