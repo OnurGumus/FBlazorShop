@@ -300,3 +300,4 @@ Application/SmartKiosk/DeskoLibs)/
 .db-shm
 .db-wal
 *.db-wal
+*.db-shm

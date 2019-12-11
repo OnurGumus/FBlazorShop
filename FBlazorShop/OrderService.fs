@@ -7,12 +7,12 @@ open FBlazorShop.App.Model
 open System.Collections.Generic
 open System.Linq
 open Akkling
-open Actor
+open Domain
 type OrderService() =
     interface IOrderService with
         member __.PlaceOrder(order: Order): Task<string> =
             async {
-                let orderActor = Actor.orderFactory <| sprintf "order-%s"  (order.OrderId.ToString())
+                let orderActor = orderFactory <| sprintf "order-%s"  (order.OrderId.ToString())
                 let! res = orderActor <? ( order |> PlaceOrder  |> Command)
 
                 match res with
@@ -23,6 +23,6 @@ type OrderService() =
 type OrderReadOnlyRepo () =
     interface IReadOnlyRepo<Order> with
         member _.Queryable: Linq.IQueryable<Order> =
-            Actor.orders().AsQueryable()
+            Projection.orders().AsQueryable()
         member _.ToListAsync(query: Linq.IQueryable<Order>): Task<IReadOnlyList<Order>> =
             query.ToList() :> IReadOnlyList<Order> |> Task.FromResult
