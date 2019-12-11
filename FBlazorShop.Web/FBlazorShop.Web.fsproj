@@ -19,7 +19,7 @@
     </DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <DefineConstants>WASM</DefineConstants>
+    <DefineConstants></DefineConstants>
     <PlatformTarget>x64</PlatformTarget>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>

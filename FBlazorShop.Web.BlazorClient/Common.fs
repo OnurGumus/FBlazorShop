@@ -15,6 +15,6 @@ type Authentication = {
     TimeStamp : DateTime;
 }
 type AuthState = NotTried | Failed | Success of Authentication
-type State = { 
+type State = {
     Authentication : AuthState;
 }

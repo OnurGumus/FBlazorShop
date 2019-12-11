@@ -58,19 +58,20 @@ let signInCmd (remote : PizzaService) (email,pass) =
 let update remote message (model : Model) =
     let validateForced form =
         let validated = validateForm form
-        {model with CurrentLogin = form; ValidatedLogin = Some validated; Focus = None}
+        {model with CurrentLogin = form; ValidatedLogin = Some validated;}
 
     let validate form =
         match model.ValidatedLogin with
         | None  ->
-            {model with CurrentLogin = form; Focus = None}
+            {model with CurrentLogin = form;}
         | Some _ -> validateForced form
 
+    let model = { model with Focus = None}
     match message, model with
     | Focused field, _ -> { model with Focus = Some field}, Cmd.none
-    | SignInRequested, _ -> {model with IsSigningIn = true}, Cmd.none
+    | SignInRequested, _ -> {model with IsSigningIn = true;}, Cmd.none
 
-    | SignInCancelled,_ -> {model with IsSigningIn = false}, Cmd.none
+    | SignInCancelled,_ -> Model.Default, Cmd.none
     | SignInSuccessful c,_ -> Model.Default, Cmd.ofMsg(SignInDone c)
     | SignInFailed s ,_-> { model with FailureReason = Some s }, Cmd.none
     | SetFormField("Email",value),_ ->
@@ -88,29 +89,9 @@ let update remote message (model : Model) =
 open Bolero.Html
 open System
 
-open Microsoft.AspNetCore.Components
-open Microsoft.JSInterop
 
-type MyComponent() =
-    inherit Component()
-    interface IDisposable with
-        member this.Dispose () =
-            this.JsRunTime.InvokeVoidAsync("exampleJsFunctions.removeOnKeyUp") |> ignore
 
-    [<Parameter>]
-    member val JsRunTime : IJSRuntime = Unchecked.defaultof<_> with get, set
-    override this.Render() = empty
-    override this.OnAfterRenderAsync firstTime =
-        async{
-            if firstTime then
-                return!
-                    this.JsRunTime.InvokeVoidAsync("exampleJsFunctions.registerForOnKeyUp", "boo").AsTask()
-                    |> Async.AwaitTask
-            else
-                return ()
-        } |> Async.StartImmediateAsTask :> _
-
-let view jsRuntime (model : Model) (dispatch : _ -> unit) =
+let view (model : Model) (dispatch : _ -> unit) =
     cond model.IsSigningIn <| function
     | true ->
         let login = model.CurrentLogin
@@ -119,7 +100,7 @@ let view jsRuntime (model : Model) (dispatch : _ -> unit) =
         let pd name = Action<string> (fun v -> dispatch (SetFormField(name,v )))
         let formItems =
             concat [
-                comp<MyComponent> ["JsRunTime" => jsRuntime] []
+                comp<BoleroHelpers.KeySubscriber> [] []
                 formFieldItem "text" (nameof login.Email) (login.Email, pd (nameof login.Email))
                 formFieldItem "password" (nameof login.Password) (login.Password, pd (nameof login.Password))
             ]

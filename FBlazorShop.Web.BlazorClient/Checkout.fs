@@ -58,7 +58,7 @@ let update remote message (model : Model, commonState : Common.State) =
         | None  ->
             {model with CurrentAddress = address;}
         | Some _ -> validateModelForAddressForced address
-
+    let model = { model with Focus = None}
     match (message, (model,commonState.Authentication)) with
     | Focused field, _ -> { model with Focus = Some field} |> noCommand
     | SetAddressName value, _ ->
@@ -94,7 +94,8 @@ let update remote message (model : Model, commonState : Common.State) =
     | _ , ({ ValidatedAddress = Some(Error _) } ,_) -> model |> noCommand
 
     | OrderPlaced order, ({ ValidatedAddress = None } , _) ->
-        model.CurrentAddress |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
+        model.CurrentAddress
+        |> validateModelForAddressForced, Cmd.ofMsg (OrderPlaced order) , Cmd.none
     | OrderPlaced order, (_, Common.AuthState.Failed) ->
         let c = Cmd.ofMsg(OrderPlaced order)
         model, c, Common.authenticationRequested

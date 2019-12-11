@@ -59,7 +59,7 @@ let initPage  init (model : Model) msg page =
     let page = { Model = pageModel } |> page
     { model with Page  = page; }, Cmd.map msg cmd
 
-let initOrderDetail  remote key model =
+let initOrderDetail remote key model =
     initPage  (OrderDetail.init  (key ,None)) model OrderDetailMsg
         (fun pageModel -> OrderDetail(key.ToString(), pageModel))
 
@@ -266,7 +266,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
 
     let loginDisplay = ecomp<LoginDisplay,_,_> model.State.Authentication dispatch
 
-    let signIn = SignIn.view js model.SignIn (SignInMessage >> dispatch  )
+    let signIn = SignIn.view model.SignIn (SignInMessage >> dispatch  )
 
     MainLayout()
         .GetPizzaLink(navLink NavLinkMatch.All
@@ -312,10 +312,11 @@ type MyApp() =
     override this.OnAfterRenderAsync(firstRender) =
         let res = base.OnAfterRenderAsync(firstRender) |> Async.AwaitTask
         async{
+            do! res
             if firstRender then
-                do! this.JSRuntime.InvokeAsync("exampleJsFunctions.sayHello", "hello").AsTask() |> Async.AwaitTask
                 dispatcher <- downcast dispatch.GetValue(this)
-            return res
+                dispatcher Rendered
+            return ()
          }|> Async.StartImmediateAsTask :> _
 
     override this.Program =
@@ -324,7 +325,7 @@ type MyApp() =
         let router = router remote (this.JSRuntime)
         Program.mkProgram (fun _ -> init this.Specials) (update) (view this.JSRuntime)
         |> Program.withRouter router
-        |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
+    //    |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
         |> Program.withTrace(fun msg model -> System.Console.WriteLine(msg))
         |> Program.withConsoleTrace
