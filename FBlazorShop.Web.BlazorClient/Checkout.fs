@@ -11,6 +11,7 @@ type Model = {
     CurrentAddress : Address
     ValidatedAddress : Result<Address,Map<string,string list>> option
     Focus : string option
+    OrderPlaced : bool
 }
 
 open Validation
@@ -44,7 +45,12 @@ type Message =
     | Focused of  string
 
 let init (_ : PizzaService) (order : Order option)  =
-    { Order =  order ; CurrentAddress = Address.Default; ValidatedAddress = None ; Focus = None} , Cmd.none
+    {   Order =  order ;
+        CurrentAddress = Address.Default;
+        ValidatedAddress = None ;
+        Focus = None
+        OrderPlaced = false
+    } , Cmd.none
 
 let noCommand state =  state, Cmd.none, Cmd.none
 let update remote message (model : Model, commonState : Common.State) =
@@ -90,7 +96,7 @@ let update remote message (model : Model, commonState : Common.State) =
         { model.CurrentAddress with Region = value}
         |> validateModelForAddress
         |> noCommand
-
+    | OrderPlaced _, ({ OrderPlaced = true } , _)
     | _ , ({ ValidatedAddress = Some(Error _) } ,_) -> model |> noCommand
 
     | OrderPlaced order, ({ ValidatedAddress = None } , _) ->
@@ -102,7 +108,7 @@ let update remote message (model : Model, commonState : Common.State) =
     | OrderPlaced order,(_,Common.AuthState.Success auth) ->
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd = Cmd.ofAsync remote.placeOrder (auth.Token, order) OrderAccepted raise
-        model, cmd, Cmd.none
+        { model with OrderPlaced = true} , cmd, Cmd.none
     | _, (_, Common.AuthState.NotTried)
     | OrderAccepted _ , _ -> invalidOp "should not happen"
 

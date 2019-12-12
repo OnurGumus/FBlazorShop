@@ -10,27 +10,30 @@ type Model = { Order : OrderWithStatus option ; Key : string}
 
 
 type Message =
-    | OrderLoaded of id :string  * OrderWithStatus option
+    | OrderLoaded of id :string  * OrderWithStatus option * bool
     | Reload
 
 let reloadCmd = Cmd.ofMsg Reload
 
-let loadPeriodically remote token id =
+let loadPeriodically remote token id firstTime =
     let doWork i =
         async{
-            do! Async.Sleep 4000;
+            if not firstTime then
+                do! Async.Sleep 4000;
             return! remote.getOrderWithStatus (token,i)
     }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,m)) (fun _ -> OrderLoaded("",None))
+    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,m, false)) (fun _ -> OrderLoaded("",None, true))
 
-let init id ={ Order = None; Key = ""}, Cmd.ofMsg (OrderLoaded id)
+let init id ={ Order = None; Key = ""}, Cmd.ofMsg (OrderLoaded (id,None, true))
 
 let update remote message (model : Model, commonModel: Common.State) =
     match message, commonModel.Authentication with
-    | Reload, Common.AuthState.Success auth -> model, loadPeriodically remote auth.Token (model.Key), Cmd.none
-    | OrderLoaded(key,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
-    | OrderLoaded ("", None), _  -> model,Cmd.none, Cmd.none
-    | OrderLoaded (id, order), Common.AuthState.Success auth -> { Order =  order; Key = id }, loadPeriodically remote auth.Token id, Cmd.none
+    | Reload, Common.AuthState.Success auth ->
+        model, loadPeriodically remote auth.Token (model.Key) true, Cmd.none
+    | OrderLoaded(key,_,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
+    | OrderLoaded ("", None,_), _  -> model,Cmd.none, Cmd.none
+    | OrderLoaded (id, order, firstTime), Common.AuthState.Success auth ->
+        { Order =  order; Key = id }, loadPeriodically remote auth.Token id firstTime, Cmd.none
     | _ -> failwith ""
 
 open Bolero.Html

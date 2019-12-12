@@ -27,7 +27,6 @@ type Model = {
 }
 
 and Message=
-
     | SetPage of Page
     | HomeMsg of Home.Message
     | MyOrdersMsg of MyOrders.Message
@@ -49,7 +48,7 @@ and Message=
 let defaultPageModel remote jsRuntime = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote jsRuntime|> fst)
-| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then "" else key ) , None)|> fst)
+| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then "" else key ) )|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
 | Start -> ()
 let router remote jsRuntime = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote jsRuntime)
@@ -60,7 +59,7 @@ let initPage  init (model : Model) msg page =
     { model with Page  = page; }, Cmd.map msg cmd
 
 let initOrderDetail remote key model =
-    initPage  (OrderDetail.init  (key ,None)) model OrderDetailMsg
+    initPage  (OrderDetail.init  (key)) model OrderDetailMsg
         (fun pageModel -> OrderDetail(key.ToString(), pageModel))
 
 let initMyOrders remote  model =
@@ -195,7 +194,7 @@ let update remote jsRuntime message model =
         genericUpdate (Home.update remote jsRuntime)(homeModel.Model) msg HomeMsg Home
 
     | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
-        let orderModel = OrderDetail.init  (o,None) |> fst
+        let orderModel = OrderDetail.init o |> fst
         let init = { Model = orderModel }
         model, Cmd.batch[ (o.ToString(),init) |> OrderDetail |> SetPage |> Cmd.ofMsg ; clearOrder jsRuntime]
 
@@ -298,7 +297,7 @@ type MyApp() =
         typeof<MyApp>
             .GetProperty("Dispatch", Reflection.BindingFlags.Instance ||| Reflection.BindingFlags.NonPublic)
 
-    static let mutable dispatcher: (Message -> unit) = Unchecked.defaultof<_>
+    let mutable dispatcher: (Message -> unit) = Unchecked.defaultof<_>
 
     [<Parameter>]
     member val Specials : PizzaSpecial list = [] with get, set
