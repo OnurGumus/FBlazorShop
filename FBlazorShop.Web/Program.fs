@@ -23,7 +23,7 @@ module Program =
         let db = scope.ServiceProvider.GetRequiredService<PizzaStoreContext>()
         if db.Database.EnsureCreated() then
             Seed.initialize db
-        Projection.init() |> ignore
+        FBlazorShop.Main.init()
         host.Run()
 
         exitCode

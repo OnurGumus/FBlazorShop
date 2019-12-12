@@ -10,3 +10,4 @@ Akka.Persistence.Query.Sql
 SQLProvider
 SQLitePCLRaw.core
 System.Data.SQLite.Core
+Akka.Cluster.Tools

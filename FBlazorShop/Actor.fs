@@ -46,6 +46,8 @@ type PlainNewtonsoftJsonSerializer ( system : ExtendedActorSystem) =
 let configWithPort port =
     let config = Configuration.parse ("""
         akka {
+            extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
+
             actor {
                 provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
                 serializers {
@@ -127,10 +129,14 @@ let system = System.create "cluster-system" (configWithPort 0)
 Akka.Cluster.Cluster.Get(system).SelfAddress
     |> Akka.Cluster.Cluster.Get(system).Join
 
+open Akka.Cluster.Tools.PublishSubscribe
+let mediator = DistributedPubSub.Get(system).Mediator;
 
 SqlitePersistence.Get(system) |> ignore
 
-let readJournal = PersistenceQuery.Get(system).ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+let readJournal =
+    PersistenceQuery.Get(system)
+        .ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
 
 let mat = ActorMaterializer.Create(system);
 
