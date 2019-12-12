@@ -5,4 +5,4 @@ open FBlazorShop.App.Model
 open System
 
 type IOrderService =
-    abstract member PlaceOrder : order : Order -> Task<string>
+    abstract member PlaceOrder : order : Order -> Task<Result<string,string>>

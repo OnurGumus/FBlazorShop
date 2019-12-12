@@ -8,16 +8,24 @@ open System.Collections.Generic
 open System.Linq
 open Akkling
 open Domain.Order
+open Domain
 
 type OrderService() =
     interface IOrderService with
-        member __.PlaceOrder(order: Order): Task<string> =
+        member __.PlaceOrder(order: Order): Task<Result<string,string>> =
             async {
                 let orderActor = factory <| sprintf "order-%s"  (order.OrderId.ToString())
-                let! res = orderActor <? ( order |> PlaceOrder  |> Command)
+                let commonCommand : Common.Command<_> =
+                    {
+                        Command = (order |> PlaceOrder) ;
+                        CreationDate = DateTime.Now ;
+                        CorrelationId = Guid.NewGuid().ToString()|> Some }
+
+                let! res = orderActor <? Order.Command(commonCommand)
 
                 match res with
-                | OrderPlaced o -> return o.OrderId
+                | {Event = OrderPlaced o }-> return (Ok o.OrderId)
+                | {Event = OrderRejected (_ , reason)}-> return (Error reason)
 
             } |> Async.StartImmediateAsTask
 

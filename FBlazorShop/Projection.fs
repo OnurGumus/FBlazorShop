@@ -13,7 +13,7 @@ let handleEvent (envelop : EventEnvelope) =
         | :? Order.Message as order ->
 
             match order with
-            | Order.Event(Order.OrderPlaced o) ->
+            | Order.Event({Event = Order.OrderPlaced o}) ->
                 let address = o.DeliveryAddress |> ser
                 let location = o.DeliveryLocation |> ser
                 let pizzas = o.Pizzas |> ser

@@ -12,7 +12,7 @@ type public PizzaService =
         getOrders : string -> Async<Order list>
         getOrderWithStatuses : string -> Async<OrderWithStatus list>
         getOrderWithStatus : string * string -> Async<OrderWithStatus option>
-        placeOrder : string * Order -> Async<string>
+        placeOrder : string * Order -> Async<Result<string,string>>
         signIn : string * string -> Async<Result<Authentication,string>>
         renewToken : string -> Async<Result<Authentication,string>>
     }

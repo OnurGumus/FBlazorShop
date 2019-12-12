@@ -4,8 +4,22 @@ open FBlazorShop.App.Model
 open Akkling
 open Akkling.Persistence
 open Akka.Cluster.Tools.PublishSubscribe
+open System
+
 [<AutoOpen>]
 module Common =
+    type Command<'Command> = {
+        Command : 'Command;
+        CreationDate  : System.DateTime;
+        CorrelationId : string option
+    }
+
+    type Event<'Event> = {
+        Event : 'Event;
+        CreationDate  : System.DateTime;
+        CorrelationId : string option
+    }
+
     module SagaStarter =
         [<Literal>]
         let SagaStarterName = "SagaStarter"
@@ -15,34 +29,47 @@ module Common =
         type Message =
               | Command of Command
               | Event of Event
-    let toCheckSagas event = event |> box  |> SagaStarter.CheckSagas |> SagaStarter.Command
-        //(mediator <? box (Send("/user/SagaStarter", msg)))
+    let toCheckSagas event = event |> box |> SagaStarter.CheckSagas |> SagaStarter.Command
 
 module Order =
+
     type Command = PlaceOrder of Order
 
-    type Event = OrderPlaced of Order
+    type Event =
+        | OrderPlaced of Order
+        | OrderRejected of Order * reason : string
 
     type Message =
-        | Command of Command
-        | Event of Event
+        | Command of Common.Command<Command>
+        | Event of Common.Event<Event>
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
         let rec set state =
             actor {
-                match! mailbox.Receive() with
-                | Event (OrderPlaced o) when mailbox.IsRecovering () ->
+                let! msg = mailbox.Receive()
+                match msg, state with
+                | Event {Event = OrderPlaced o},_ when mailbox.IsRecovering () ->
                     return! o |> Some |> set
-                | Command(PlaceOrder o) ->
-                    let event =  o |> OrderPlaced |> Event
+                | Command{Command = PlaceOrder o; CorrelationId = ci}, None ->
+                    let event = {
+                        Event = o |> OrderPlaced;
+                        CreationDate = DateTime.Now;
+                        CorrelationId = ci } |> Event
                     return!
                         mediator <? box (Send("/user/SagaStarter", event |> toCheckSagas))
                         |> Async.RunSynchronously
                         |> function
                         | SagaStarter.SagaCheckDone ->
                              event |> Persist
+                | Command {Command = PlaceOrder o; CorrelationId = ci}, Some _ ->
+                    mailbox.Sender()
+                        <!
+                            {  Event = (OrderRejected(o,"duplicate"));
+                                CreationDate = DateTime.Now;
+                                CorrelationId = ci}
 
-                | Persisted mailbox (Event(OrderPlaced o as e)) ->
+
+                | Persisted mailbox (Event({Event = OrderPlaced o }as e)), _ ->
                     mailbox.Sender() <! e
                     mediator <! box (Publish(mailbox.Self.Path.Name, e))
                     return! o |> Some |> set
