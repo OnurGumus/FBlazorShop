@@ -56,7 +56,7 @@ let configWithPort port =
                 }
                 serialization-bindings {
                     "System.Object" = json
-                    "Domain+Order+Message, FBlazorShop" = plainnewtonsoft
+                    "Actor+IDefaultTag, FBlazorShop" = plainnewtonsoft
                 }
             }
             remote {
@@ -68,7 +68,7 @@ let configWithPort port =
             }
             cluster {
                 auto-down-unreachable-after = 5s
-                // sharding.remember-entities = true
+               # sharding.remember-entities = true
             }
             persistence{
                 query.journal.sql {
@@ -88,7 +88,7 @@ let configWithPort port =
 
                 # How many events to fetch in one query (replay) and keep buffered until they
                 # are delivered downstreams.
-                max-buffer-size = 100
+                max-buffer-size = 20
                 }
                 journal {
                   plugin = "akka.persistence.journal.sqlite"
@@ -98,7 +98,7 @@ let configWithPort port =
                       auto-initialize = on
                       event-adapters.tagger = "Actor+Tagger, FBlazorShop"
                       event-adapter-bindings {
-                        "Domain+Order+Message, FBlazorShop" = tagger
+                        "Actor+IDefaultTag, FBlazorShop" = tagger
                       }
 
                   }
@@ -117,6 +117,9 @@ let configWithPort port =
 
 
 let deft = ImmutableHashSet.Create("default")
+type IDefaultTag = interface end
+
+
 
 type Tagger  =
     interface IWriteEventAdapter with

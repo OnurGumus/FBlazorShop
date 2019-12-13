@@ -5,6 +5,8 @@ open Akkling
 open Akkling.Persistence
 open Akka.Cluster.Tools.PublishSubscribe
 open System
+open AkklingHelpers
+open Actor
 
 [<AutoOpen>]
 module Common =
@@ -42,13 +44,14 @@ module Order =
     type Message =
         | Command of Common.Command<Command>
         | Event of Common.Event<Event>
+        with interface IDefaultTag
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
         let rec set state =
             actor {
                 let! msg = mailbox.Receive()
                 match msg, state with
-                | Event {Event = OrderPlaced o},_ when mailbox.IsRecovering () ->
+                | Recovering mailbox (Event {Event = OrderPlaced o}), _ ->
                     return! o |> Some |> set
                 | Command{Command = PlaceOrder o; CorrelationId = ci}, None ->
                     let event = {
@@ -62,26 +65,60 @@ module Order =
                         | SagaStarter.SagaCheckDone ->
                              event |> Persist
                 | Command {Command = PlaceOrder o; CorrelationId = ci}, Some _ ->
-                    mailbox.Sender()
-                        <!
-                            {  Event = (OrderRejected(o,"duplicate"));
-                                CreationDate = DateTime.Now;
-                                CorrelationId = ci}
+                    mailbox.Sender() <! {
+                        Event = OrderRejected(o,"duplicate")
+                        CreationDate = DateTime.Now;
+                        CorrelationId = ci
+                    }
 
-
-                | Persisted mailbox (Event({Event = OrderPlaced o }as e)), _ ->
+                | Persisted mailbox (Event({Event = OrderPlaced o } as e)), _ ->
                     mailbox.Sender() <! e
                     mediator <! box (Publish(mailbox.Self.Path.Name, e))
                     return! o |> Some |> set
                 | _ -> invalidOp "not supported"
             }
         set None
+    let init =
+        AkklingHelpers.entityFactoryFor Actor.system "Order"
+            <| propsPersist (actorProp (typed Actor.mediator))
+            <| false
 
     let factory entityId =
-        (AkklingHelpers.entityFactoryFor Actor.system "Order"
-            <| propsPersist (actorProp (typed Actor.mediator))
-            <| None)
-            .RefFor AkklingHelpers.DEFAULT_SHARD entityId
+           init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
+
+module OrderSaga =
+    type State =
+        | Started
+        | OutForDelivery
+        | Delivered
+
+    type Event =
+        | StateChanged of State
+        with interface IDefaultTag
+
+    let actorProp (mediator : IActorRef<_>)(mailbox : Eventsourced<obj>)=
+        let rec set state =
+            actor {
+                    let! msg = mailbox.Receive()
+                    match box(msg), state with
+                    | Recovering mailbox (:? Event as e), _ ->
+                        match e with
+                        | StateChanged s -> return! set (box(s))
+                    | Persisted mailbox e, _-> return! set e
+                    | :? Event as e, _  ->
+                        match e with
+                        | StateChanged state ->
+                           return! Persist(StateChanged (state)|>box)
+                    | _ -> return! set state
+            }
+        set Started
+    let init =
+        (AkklingHelpers.entityFactoryFor Actor.system "OrderSaga"
+        <| propsPersist (actorProp(typed Actor.mediator))
+        <| true)
+
+    let factory entityId =
+        init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
 
 module SagaStarter =
     open SagaStarter
@@ -108,6 +145,8 @@ let init () =
             <| props SagaStarter.actorProp
 
     typed Actor.mediator <! (sagaStarter |> untyped |> Put)
-    Order.factory "Order_ZERO" |> ignore
+    Order.init |> ignore
+    OrderSaga.init |> ignore
+    //orderSaga <! box (OrderSaga.StateChanged(OrderSaga.OutForDelivery))
     System.Threading.Thread.Sleep(1000)
 
