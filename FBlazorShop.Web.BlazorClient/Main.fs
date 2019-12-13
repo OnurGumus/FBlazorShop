@@ -185,7 +185,7 @@ let update remote jsRuntime message model =
     | MyOrdersMsg msg, MyOrders myOrdersModel ->
         genericUpdateWithCommon (MyOrders.update remote) (myOrdersModel.Model) msg MyOrdersMsg MyOrders
 
-    | HomeMsg (Home.Message.OrderMsg (CheckoutRequested o)),_  ->
+    | HomeMsg (Home.Message.CheckoutRequested o),_  ->
         let orderModel = Checkout.init remote (Some o) |> fst
         let init = { Model = orderModel }
         model, init |> Checkout |> SetPage |> Cmd.ofMsg

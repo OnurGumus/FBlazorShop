@@ -16,6 +16,8 @@ type Message =
     | SpecialsReceived of PizzaSpecial list
     | PizzaConfigMsg of PizzaConfigMsg
     | OrderMsg of OrderMsg
+    | CheckoutRequested of Order
+
 
 open Elmish
 
@@ -31,6 +33,7 @@ let init (remote: PizzaService) jsRuntime =
 
 let update remote jsRuntime message model =
     match message with
+    | OrderMsg (OrderMsg.CheckoutRequested o) -> model, Cmd.ofMsg(CheckoutRequested o)
     | SpecialsReceived d -> { model with specials = d }, Cmd.none
     | PizzaConfigMsg(ConfigDone p) ->
         model,
@@ -45,6 +48,7 @@ let update remote jsRuntime message model =
     | OrderMsg msg ->
         let orderModel, cmd = Orders.update  remote jsRuntime model.Order msg
         { model with Order = orderModel }, Cmd.map OrderMsg cmd
+    | CheckoutRequested _ -> failwith "should be intercepted"
 
 open Bolero
 open BoleroHelpers
