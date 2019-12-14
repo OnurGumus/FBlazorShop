@@ -32,10 +32,24 @@ module Common =
 
 
     module SagaStarter =
-        let toOriginatorName (name : string) =  name.Replace("Saga_","_")
-        let toSagaName (name : string) = name.Replace("_","Saga_")
+        let toOriginatorName (name : string) =
+            let first = name.Replace("_Saga_","_")
+            let index = first.IndexOf('_')
+            let lastIndex = first.LastIndexOf('_')
+            if index <> lastIndex then
+                first.Substring(index + 1)
+            else
+                first
+
+        let toSagaName (name : string) = name.Replace("_","_Saga_")
+        let isSaga (name : string) = name.Contains("_Saga_")
+
         [<Literal>]
         let SagaStarterName = "SagaStarter"
+
+        [<Literal>]
+        let SagaStarterPath = "/user/SagaStarter"
+
 
         type Command  =
             | CheckSagas of obj * originator : Actor.IActorRef
@@ -44,11 +58,23 @@ module Common =
         type Message =
               | Command of Command
               | Event of Event
-    let toCheckSagas (event, originator) =
-        ((event |> box), originator)
-            |> SagaStarter.CheckSagas |> SagaStarter.Command
-    let toSendMessage (event, originator) =
-        Send("/user/SagaStarter", (event, originator) |> toCheckSagas)
+
+        let toCheckSagas (event, originator) =
+            ((event |> box), originator)
+                |> CheckSagas |> Command
+
+        let toSendMessage (event, originator) =
+            Send(SagaStarterPath, (event, originator) |> toCheckSagas)
+
+        let publishEvent (sender : IActorRef<_>) (self : IActorRef<_>) (mediator:IActorRef<_>) event=
+
+            if sender.Path.Name |> isSaga then
+                let originatorName = sender.Path.Name |> toOriginatorName
+                if originatorName <> self.Path.Name then
+                    mediator <! box (Publish(self.Path.Name, event ))
+            else
+                sender <! event
+            mediator <! box (Publish(self.Path.Name, event))
 
 module Order =
 
@@ -74,7 +100,7 @@ module Order =
                 | Command{Command = PlaceOrder o; CorrelationId = ci}, None ->
                     let event = o |> OrderPlaced |> Event.toEvent ci |> Event
                     let res =
-                        mediator <? ((event, untyped mailbox.Self ) |> toSendMessage |> box)
+                        mediator <? ((event, untyped mailbox.Self ) |> SagaStarter.toSendMessage |> box)
                         |> Async.RunSynchronously
                     match res with
                         | SagaStarter.SagaCheckDone ->
@@ -84,8 +110,8 @@ module Order =
                     mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
 
                 | Persisted mailbox (Event({Event = OrderPlaced o } as e)), _ ->
-                    mailbox.Sender() <! e
-                    mediator <! box (Publish(mailbox.Self.Path.Name, e))
+                    let sender = mailbox.Sender()
+                    SagaStarter.publishEvent sender mailbox.Self mediator e
                     return! o |> Some |> set
                 | _ -> invalidOp "not supported"
             }
@@ -115,7 +141,7 @@ module OrderSaga =
                     let! msg = mailbox.Receive()
                     match box(msg), state with
                     | :? SubscribeAck as s, _ when  s.Subscribe.Topic = originatorName ->
-                        mediator <! box (Send("/user/SagaStarter", SagaStarter.Continue |> SagaStarter.Command))
+                        mediator <! box (Send(SagaStarter.SagaStarterPath, SagaStarter.Continue |> SagaStarter.Command))
                         return! set state
                     | PersistentLifecycleEvent ReplaySucceed ,_->
                         mediator <! box (Subscribe(originatorName, untyped mailbox.Self))
