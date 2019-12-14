@@ -14,12 +14,13 @@ type OrderService() =
     interface IOrderService with
         member __.PlaceOrder(order: Order): Task<Result<string,string>> =
             async {
-                let orderActor = factory <| sprintf "order-%s"  (order.OrderId.ToString())
+                let orderId = sprintf "order_%s" <| order.OrderId.ToString()
+                let orderActor = factory orderId
                 let commonCommand : Common.Command<_> =
                     {
                         Command = (order |> PlaceOrder) ;
                         CreationDate = DateTime.Now ;
-                        CorrelationId = Guid.NewGuid().ToString()|> Some }
+                        CorrelationId = orderId |> Some }
 
                 let! res = orderActor <? Order.Command(commonCommand)
 

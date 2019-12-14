@@ -292,12 +292,17 @@ open Microsoft.AspNetCore.Components
 
 type MyApp() =
     inherit ProgramComponent<Model, Message>()
-
     let  dispatch =
         typeof<MyApp>
             .GetProperty("Dispatch", Reflection.BindingFlags.Instance ||| Reflection.BindingFlags.NonPublic)
 
     let mutable dispatcher: (Message -> unit) = Unchecked.defaultof<_>
+    static member  val Dispatchers :  System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit), unit>
+        = new System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit),unit>() with get, set
+    interface IDisposable with
+          member __.Dispose() =
+            if dispatcher |> box |> isNull |> not then
+                MyApp.Dispatchers.TryRemove(dispatcher) |> ignore
 
     [<Parameter>]
     member val Specials : PizzaSpecial list = [] with get, set
@@ -314,6 +319,7 @@ type MyApp() =
             do! res
             if firstRender then
                 dispatcher <- downcast dispatch.GetValue(this)
+                MyApp.Dispatchers.TryAdd(dispatcher,()) |> ignore
                 dispatcher Rendered
             return ()
          }|> Async.StartImmediateAsTask :> _

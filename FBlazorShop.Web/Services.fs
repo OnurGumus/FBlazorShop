@@ -9,6 +9,7 @@ open JWT
 open System.Security.Cryptography
 open JWT.Algorithms
 open System.Collections.Generic
+open FBlazorShop.Web.BlazorClient.Main
 
 type public PizzaService(ctx: IRemoteContext) =
         inherit RemoteHandler<BlazorClient.Services.PizzaService>()
@@ -99,6 +100,10 @@ type public PizzaService(ctx: IRemoteContext) =
                         | "Password" ->
                             let token = generateToken email
                             return Ok( { User = email ; Token = token ; TimeStamp = System.DateTime.Now} )
-                        | _ -> return Error("Invalid login. Try Password as password")
+                        | _ ->
+                            for (d:Message -> unit) in MyApp.Dispatchers.Keys do
+                                                 d(SignOutRequested)
+
+                            return Error("Invalid login. Try Password as password")
                     }
         }
