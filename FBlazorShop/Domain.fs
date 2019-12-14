@@ -86,6 +86,51 @@ module Common =
             let originatorName = mailbox.Self.Path.Name |> toOriginatorName
             mediator <! box (Subscribe(originatorName, untyped mailbox.Self))
 
+        let actorProp (sagaCheck : obj -> ((string -> IEntityRef<_>) option)) (mailbox : Actor<_>)=
+            let rec set (state  : Map<string, (Actor.IActorRef * string list)>) =
+
+                let startSaga (originator : Actor.IActorRef) (factory : string -> IEntityRef<_>) =
+                    let sender = untyped <| mailbox.Sender()
+                    let saga = originator.Path.Name |> toSagaName |> factory
+                    let state = state.Add(originator.Path.Name,(sender,[saga.EntityId]))
+                    saga <! box(ShardRegion.StartEntity (saga.EntityId))
+                    state
+
+                actor {
+                    match! mailbox.Receive() with
+                    | Command (Continue) ->
+                        //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
+                        let sender = untyped <| mailbox.Sender()
+                        let originName = sender.Path.Name |> toOriginatorName
+                        let originator,subscribers = state.[originName]
+                        let newList = subscribers |> List.filter (fun a -> a <> sender.Path.Name)
+                        match newList with
+                            | [] -> originator.Tell(SagaCheckDone, untyped mailbox.Self)
+                            | _ ->
+                                return! set
+                                    <| state
+                                        .Remove(originName)
+                                        .Add(originName, (originator,newList))
+
+
+                    | Command(CheckSagas (o, originator)) ->
+                        match sagaCheck o with
+                        | Some factory ->  return! set <| startSaga originator factory
+                        | _ ->
+                            mailbox.Sender() <! SagaCheckDone
+                            return! set state
+                    | _ -> return! set state
+
+                }
+            set Map.empty
+
+        let init sagaCheck =
+            let sagaStarter =
+                spawn Actor.system
+                    <| SagaStarterName
+                    <| props (actorProp sagaCheck)
+
+            typed Actor.mediator <! (sagaStarter |> untyped |> Put)
 
 module Order =
 
@@ -146,41 +191,41 @@ module OrderSaga =
         let originatorName = mailbox.Self.Path.Name |> SagaStarter.toOriginatorName
         let rec set (state : State) =
             actor {
-                    let! msg = mailbox.Receive()
-                    match box(msg), state with
-                    | :? SubscribeAck as s, _ when s.Subscribe.Topic = originatorName ->
-                        // notify saga starter about the subscription completed
-                        SagaStarter.cont mediator
-                        return! set state
+                let! msg = mailbox.Receive()
+                match box(msg), state with
+                | :? SubscribeAck as s, _ when s.Subscribe.Topic = originatorName ->
+                    // notify saga starter about the subscription completed
+                    SagaStarter.cont mediator
+                    return! set state
 
-                    | PersistentLifecycleEvent ReplaySucceed ,_->
-                        SagaStarter.subscriber mediator mailbox
-                        //  take recovery action for the current state
-                        return! set state
+                | PersistentLifecycleEvent ReplaySucceed ,_->
+                    SagaStarter.subscriber mediator mailbox
+                    //  take recovery action for the current state
+                    return! set state
 
-                    | Recovering mailbox (:? Event as e), _ ->
-                        //replay the recovery
+                | Recovering mailbox (:? Event as e), _ ->
+                    //replay the recovery
+                    match e with
+                    | StateChanged s -> return! set s
+
+                | Persisted mailbox msg, _->
+                    match msg with
+                    | :? Event as e ->
                         match e with
-                        | StateChanged s -> return! set s
-
-                    | Persisted mailbox msg, _->
-                        match msg with
-                        | :? Event as e ->
-                            match e with
-                            | StateChanged state ->
-                                //take entry actions of new state
-                                return! set state
-
-                        | _ -> return! set state
-                    | :? Common.Event<Order.Event> as orderEvent, _ ->
-                        match orderEvent with
-                        | {Event = Order.OrderPlaced o } ->
-                          // decide new state
-                          return! Persist(StateChanged (state)|>box)
-
-                        | _ -> return! set state
+                        | StateChanged state ->
+                            //take entry actions of new state
+                            return! set state
 
                     | _ -> return! set state
+                | :? Common.Event<Order.Event> as orderEvent, _ ->
+                    match orderEvent with
+                    | {Event = Order.OrderPlaced o } ->
+                      // decide new state
+                      return! Persist(StateChanged (state)|>box)
+
+                    | _ -> return! set state
+
+                | _ -> return! set state
             }
         set Started
 
@@ -192,61 +237,17 @@ module OrderSaga =
     let factory entityId =
         init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
 
-module SagaStarter =
-    open SagaStarter
-    let actorProp (mailbox : Actor<_>)=
-        let rec set (state  : Map<string, (Actor.IActorRef * string list)>) =
-
-            let startSaga (originator : Actor.IActorRef) (factory : string -> IEntityRef<_>) =
-                let sender = untyped <| mailbox.Sender()
-                let saga = originator.Path.Name |> SagaStarter.toSagaName |> factory
-                let state = state.Add(originator.Path.Name,(sender,[saga.EntityId]))
-                saga <! box(ShardRegion.StartEntity (saga.EntityId))
-                state
-
-            actor {
-                match! mailbox.Receive() with
-                | Command (Continue) ->
-                    //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
-                    let sender = untyped <| mailbox.Sender()
-                    let originName = sender.Path.Name |> SagaStarter.toOriginatorName
-                    let originator,subscribers = state.[originName]
-                    let newList = subscribers |> List.filter (fun a -> a <> sender.Path.Name)
-                    match newList with
-                        | [] -> originator.Tell(SagaCheckDone, untyped mailbox.Self)
-                        | _ ->
-                            return! set
-                                <| state
-                                    .Remove(originName)
-                                    .Add(originName, (originator,newList))
-
-
-                | Command(CheckSagas (o, originator)) ->
-                    match o with
-                    | :? Common.Event<Order.Event> as e ->
-                        match e with
-                        | {Event = Order.OrderPlaced _  }  ->
-                            //start saga
-                            return! set <| startSaga originator OrderSaga.factory
-                        | _ -> mailbox.Sender() <! SagaCheckDone
-
-                    | _ ->  mailbox.Sender() <! SagaCheckDone
-                    return set state
-                | _ -> return! set state
-
-            }
-        set Map.empty
-
-    let init =
-        let sagaStarter =
-            spawn Actor.system
-                <| SagaStarter.SagaStarterName
-                <| props actorProp
-
-        typed Actor.mediator <! (sagaStarter |> untyped |> Put)
-
 let init () =
-    SagaStarter.init
+    let sagaCheck =
+        fun (o : obj) ->
+            match o with
+            | :? Common.Event<Order.Event> as e ->
+                match e with
+                | {Event = Order.OrderPlaced _  }  -> Some OrderSaga.factory
+                | _ -> None
+            | _ -> None
+
+    SagaStarter.init sagaCheck
     Order.init |> ignore
     OrderSaga.init |> ignore
     System.Threading.Thread.Sleep(1000)
