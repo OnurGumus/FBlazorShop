@@ -15,6 +15,7 @@ open Akkling.Cluster
 open Akkling.Cluster.Sharding
 open Hyperion
 open Akka.Serialization
+open Akka.Cluster.Tools.PublishSubscribe
 
 [<Literal>]
 let DEFAULT_SHARD = "default-shard"
@@ -73,3 +74,4 @@ let (|Recovering|_|) (context: Eventsourced<'Message>) (msg: 'Message) : 'Messag
     if context.IsRecovering ()
     then Some msg
     else None
+

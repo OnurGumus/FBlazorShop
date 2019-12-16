@@ -3,6 +3,7 @@
 open Akka.Persistence.Query
 open Newtonsoft.Json
 open Domain
+open Common
 
 let ser = JsonConvert.SerializeObject
 let deser<'t>  = JsonConvert.DeserializeObject<'t>
@@ -10,10 +11,10 @@ let deser<'t>  = JsonConvert.DeserializeObject<'t>
 let handleEvent (envelop : EventEnvelope) =
     try
         match envelop.Event with
-        | :? Order.Message as order ->
+        | :? Message<Order.Command,Order.Event> as order ->
 
             match order with
-            | Order.Event({Event = Order.OrderPlaced o}) ->
+            | Event({Event = Order.OrderPlaced o}) ->
                 let address = o.DeliveryAddress |> ser
                 let location = o.DeliveryLocation |> ser
                 let pizzas = o.Pizzas |> ser

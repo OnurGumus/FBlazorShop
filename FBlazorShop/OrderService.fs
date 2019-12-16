@@ -9,20 +9,22 @@ open System.Linq
 open Akkling
 open Domain.Order
 open Domain
+open Common
 
 type OrderService() =
     interface IOrderService with
         member __.PlaceOrder(order: Order): Task<Result<string,string>> =
             async {
-                let orderId = sprintf "order_%s" <| order.OrderId.ToString()
+                let corID = order.OrderId.ToString()
+                let orderId = sprintf "order_%s" <| corID
                 let orderActor = factory orderId
-                let commonCommand : Common.Command<_> =
+                let commonCommand : Command<_> =
                     {
                         Command = (order |> PlaceOrder) ;
                         CreationDate = DateTime.Now ;
-                        CorrelationId = orderId |> Some }
+                        CorrelationId = (corID |> Some )}
 
-                let! res = orderActor <? Order.Command(commonCommand)
+                let! res = orderActor <? (commonCommand |> Command)
 
                 match res with
                 | {Event = OrderPlaced o }-> return (Ok o.OrderId)

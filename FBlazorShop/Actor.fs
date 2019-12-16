@@ -56,7 +56,7 @@ let configWithPort port =
                 }
                 serialization-bindings {
                     "System.Object" = json
-                    "Actor+IDefaultTag, FBlazorShop" = plainnewtonsoft
+                    "Common+IDefaultTag, FBlazorShop" = plainnewtonsoft
                 }
             }
             remote {
@@ -98,7 +98,7 @@ let configWithPort port =
                       auto-initialize = on
                       event-adapters.tagger = "Actor+Tagger, FBlazorShop"
                       event-adapter-bindings {
-                        "Actor+IDefaultTag, FBlazorShop" = tagger
+                        "Common+IDefaultTag, FBlazorShop" = tagger
                       }
 
                   }
@@ -117,7 +117,6 @@ let configWithPort port =
 
 
 let deft = ImmutableHashSet.Create("default")
-type IDefaultTag = interface end
 
 
 

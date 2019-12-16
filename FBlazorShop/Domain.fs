@@ -3,147 +3,17 @@
 open FBlazorShop.App.Model
 open Akkling
 open Akkling.Persistence
-open Akka.Cluster.Tools.PublishSubscribe
-open System
 open AkklingHelpers
 open Actor
 open Akka
-open Akka.Cluster.Sharding
-open Akkling.Cluster.Sharding
-
-[<AutoOpen>]
-module Common =
-    type Command<'Command> = {
-        Command : 'Command;
-        CreationDate  : System.DateTime;
-        CorrelationId : string option
-    }
-
-    type Event<'Event> = {
-        Event : 'Event;
-        CreationDate  : System.DateTime;
-        CorrelationId : string option
-    }
-    with static member toEvent ci event  = {
-            Event = event
-            CreationDate = DateTime.Now;
-            CorrelationId =  ci
-    }
-
-
-    module SagaStarter =
-        let toOriginatorName (name : string) =
-            let first = name.Replace("_Saga_","_")
-            let index = first.IndexOf('_')
-            let lastIndex = first.LastIndexOf('_')
-            if index <> lastIndex then
-                first.Substring(index + 1)
-            else
-                first
-
-        let toSagaName (name : string) = name.Replace("_","_Saga_")
-        let isSaga (name : string) = name.Contains("_Saga_")
-
-        [<Literal>]
-        let SagaStarterName = "SagaStarter"
-
-        [<Literal>]
-        let SagaStarterPath = "/user/SagaStarter"
-
-
-        type Command  =
-            | CheckSagas of obj * originator : Actor.IActorRef
-            | Continue
-        type Event = SagaCheckDone
-        type Message =
-              | Command of Command
-              | Event of Event
-
-        let toCheckSagas (event, originator) =
-            ((event |> box), originator)
-                |> CheckSagas |> Command
-
-        let toSendMessage  mediator (originator : IActorRef<_>) event  =
-            let message = Send(SagaStarterPath, (event, untyped originator) |> toCheckSagas)
-            (mediator <? (message |> box)) |> Async.RunSynchronously |> function
-            | SagaCheckDone -> ()
-
-
-        let publishEvent (mailbox : Eventsourced<_>) (mediator:IActorRef<_>) event=
-            let sender = mailbox.Sender()
-            let self = mailbox.Self
-            if sender.Path.Name |> isSaga then
-                let originatorName = sender.Path.Name |> toOriginatorName
-                if originatorName <> self.Path.Name then
-                    mediator <! box (Publish(self.Path.Name, event ))
-            else
-                sender <! event
-            mediator <! box (Publish(self.Path.Name, event))
-        let cont (mediator : IActorRef<_>) =
-            mediator <! box (Send(SagaStarterPath, Continue |> Command))
-
-        let subscriber (mediator : IActorRef<_>) (mailbox : Eventsourced<_>) =
-            let originatorName = mailbox.Self.Path.Name |> toOriginatorName
-            mediator <! box (Subscribe(originatorName, untyped mailbox.Self))
-
-        let actorProp (sagaCheck : obj -> ((string -> IEntityRef<_>) option)) (mailbox : Actor<_>)=
-            let rec set (state  : Map<string, (Actor.IActorRef * string list)>) =
-
-                let startSaga (originator : Actor.IActorRef) (factory : string -> IEntityRef<_>) =
-                    let sender = untyped <| mailbox.Sender()
-                    let saga = originator.Path.Name |> toSagaName |> factory
-                    let state = state.Add(originator.Path.Name,(sender,[saga.EntityId]))
-                    saga <! box(ShardRegion.StartEntity (saga.EntityId))
-                    state
-
-                actor {
-                    match! mailbox.Receive() with
-                    | Command (Continue) ->
-                        //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
-                        let sender = untyped <| mailbox.Sender()
-                        let originName = sender.Path.Name |> toOriginatorName
-                        let originator,subscribers = state.[originName]
-                        let newList = subscribers |> List.filter (fun a -> a <> sender.Path.Name)
-                        match newList with
-                            | [] -> originator.Tell(SagaCheckDone, untyped mailbox.Self)
-                            | _ ->
-                                return! set
-                                    <| state
-                                        .Remove(originName)
-                                        .Add(originName, (originator,newList))
-
-
-                    | Command(CheckSagas (o, originator)) ->
-                        match sagaCheck o with
-                        | Some factory ->  return! set <| startSaga originator factory
-                        | _ ->
-                            mailbox.Sender() <! SagaCheckDone
-                            return! set state
-                    | _ -> return! set state
-
-                }
-            set Map.empty
-
-        let init sagaCheck =
-            let sagaStarter =
-                spawn Actor.system
-                    <| SagaStarterName
-                    <| props (actorProp sagaCheck)
-
-            typed Actor.mediator <! (sagaStarter |> untyped |> Put)
+open Common
 
 module Order =
-
     type Command = PlaceOrder of Order
 
     type Event =
         | OrderPlaced of Order
         | OrderRejected of Order * reason : string
-
-    type Message =
-        | Command of Common.Command<Command>
-        | Event of Common.Event<Event>
-        with interface IDefaultTag
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
         let rec set state =
@@ -166,7 +36,7 @@ module Order =
                 | Persisted mailbox (Event({Event = OrderPlaced o } as e)), _ ->
                     SagaStarter.publishEvent mailbox mediator e
                     return! o |> Some |> set
-                | _ -> invalidOp "not supported"
+                | _ -> return Unhandled
             }
         set None
     let init =
@@ -177,23 +47,66 @@ module Order =
     let factory entityId =
            init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
 
+
+module Delivery =
+    type Command = StartDelivery of Order
+
+    type Event =
+        | Delivered of Order
+      //  | Deliver
+      //  | OrderRejected of Order * reason : string
+    type State = NotStarted | Delivering of LatLong * Order | Delivered of Order
+
+
+    let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
+        let rec set (state : State) =
+            actor {
+                let! msg = mailbox.Receive()
+                match msg, state with
+                | Recovering mailbox (Event {Event = Delivered o}), _ ->
+                    return! o |> Delivered |> set
+
+                | Command{Command = StartDelivery o; CorrelationId = ci}, NotStarted ->
+                    //call saga starter and wait till it responds
+                    let event = o |> Delivered |> Event.toEvent ci
+                    SagaStarter.toSendMessage mediator mailbox.Self event
+                    return! event |> Event |> Persist
+
+                //| Command {Command = PlaceOrder o; CorrelationId = ci}, Some _ ->
+                //    //An order can be placed once only
+                //    mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
+
+                | Persisted mailbox (Event({Event = Delivered o } as e)), _ ->
+                   SagaStarter.publishEvent mailbox mediator e
+                   return! set (Delivered o)
+                | _ -> return Unhandled
+            }
+        set NotStarted
+    let init =
+        AkklingHelpers.entityFactoryFor Actor.system "Delivery"
+            <| propsPersist (actorProp (typed Actor.mediator))
+            <| false
+
+    let factory entityId =
+           init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
+
 module OrderSaga =
     type State =
         | Started
-        | OutForDelivery
-        | Delivered
+        | ProcessingOrder of Order
+        | OutForDelivery of Order
+        | Delivered of Order
 
     type Event =
         | StateChanged of State
         with interface IDefaultTag
 
     let actorProp (mediator : IActorRef<_>)(mailbox : Eventsourced<obj>)=
-        let originatorName = mailbox.Self.Path.Name |> SagaStarter.toOriginatorName
         let rec set (state : State) =
             actor {
                 let! msg = mailbox.Receive()
-                match box(msg), state with
-                | :? SubscribeAck as s, _ when s.Subscribe.Topic = originatorName ->
+                match msg, state with
+                | SagaStarter.SubscrptionAcknowledged mailbox _, _  ->
                     // notify saga starter about the subscription completed
                     SagaStarter.cont mediator
                     return! set state
@@ -208,19 +121,24 @@ module OrderSaga =
                     match e with
                     | StateChanged s -> return! set s
 
-                | Persisted mailbox msg, _->
-                    match msg with
-                    | :? Event as e ->
-                        match e with
-                        | StateChanged state ->
-                            //take entry actions of new state
-                            return! set state
+                | Persisted mailbox (:? Event as e ), _->
+                    match e with
+                    | StateChanged (ProcessingOrder o) ->
+                        let rawGuid = (mailbox.Self.Path.Name |> SagaStarter.toRawoGuid)
+                        let delivery = Delivery.factory <| "Delivery_" + rawGuid
+                        delivery<!
+                            ({ Command =  Delivery.StartDelivery o;
+                                CreationDate = System.DateTime.Now;
+                                CorrelationId = Some rawGuid} |> Common.Command)
+                        //take entry actions of new state
+                        return! set state
 
                     | _ -> return! set state
                 | :? Common.Event<Order.Event> as orderEvent, _ ->
                     match orderEvent with
                     | {Event = Order.OrderPlaced o } ->
                       // decide new state
+                      let state = ProcessingOrder o
                       return! Persist(StateChanged (state)|>box)
 
                     | _ -> return! set state
@@ -237,17 +155,16 @@ module OrderSaga =
     let factory entityId =
         init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
 
-let init () =
-    let sagaCheck =
-        fun (o : obj) ->
-            match o with
-            | :? Common.Event<Order.Event> as e ->
-                match e with
-                | {Event = Order.OrderPlaced _  }  -> Some OrderSaga.factory
-                | _ -> None
-            | _ -> None
+let sagaCheck (o : obj)=
+    match o with
+    | :? Common.Event<Order.Event> as e ->
+        match e with
+        | {Event = Order.OrderPlaced _  }  -> Some OrderSaga.factory
+        | _ -> None
+    | _ -> None
 
-    SagaStarter.init sagaCheck
+let init () =
+    SagaStarter.init Actor.system Actor.mediator sagaCheck
     Order.init |> ignore
     OrderSaga.init |> ignore
     System.Threading.Thread.Sleep(1000)
