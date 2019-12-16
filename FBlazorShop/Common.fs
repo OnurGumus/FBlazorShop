@@ -79,7 +79,7 @@ module SagaStarter =
         if sender.Path.Name |> isSaga then
             let originatorName = sender.Path.Name |> toOriginatorName
             if originatorName <> self.Path.Name then
-                mediator <! box (Publish(self.Path.Name, event ))
+                mediator <! box (Publish(originatorName, event ))
         else
             sender <! event
         mediator <! box (Publish(self.Path.Name, event))
@@ -112,7 +112,12 @@ module SagaStarter =
                     //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
                     let sender = untyped <| mailbox.Sender()
                     let originName = sender.Path.Name |> toOriginatorName
-                    let originator,subscribers = state.[originName]
+                    //weird bug cause an NRE with TryGet
+                    let matchFound = state.ContainsKey(originName)
+                    if not matchFound then
+                        return! set state
+                    else
+                    let (originator,subscribers) = state.[originName]
                     let newList = subscribers |> List.filter (fun a -> a <> sender.Path.Name)
                     match newList with
                         | [] -> originator.Tell(SagaCheckDone, untyped mailbox.Self)

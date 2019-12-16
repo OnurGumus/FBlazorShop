@@ -7,6 +7,7 @@ open AkklingHelpers
 open Actor
 open Akka
 open Common
+open Akka.Cluster.Sharding
 
 module Order =
     type Command = PlaceOrder of Order
@@ -55,7 +56,7 @@ module Delivery =
         | Delivered of Order
       //  | Deliver
       //  | OrderRejected of Order * reason : string
-    type State = NotStarted | Delivering of LatLong * Order | Delivered of Order
+    type State = NotStarted | Delivering of LatLong * Order | DeliveryCompleted of Order
 
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
@@ -64,7 +65,7 @@ module Delivery =
                 let! msg = mailbox.Receive()
                 match msg, state with
                 | Recovering mailbox (Event {Event = Delivered o}), _ ->
-                    return! o |> Delivered |> set
+                    return! o |> DeliveryCompleted |> set
 
                 | Command{Command = StartDelivery o; CorrelationId = ci}, NotStarted ->
                     //call saga starter and wait till it responds
@@ -78,7 +79,7 @@ module Delivery =
 
                 | Persisted mailbox (Event({Event = Delivered o } as e)), _ ->
                    SagaStarter.publishEvent mailbox mediator e
-                   return! set (Delivered o)
+                   return! set (DeliveryCompleted o)
                 | _ -> return Unhandled
             }
         set NotStarted
@@ -113,7 +114,7 @@ module OrderSaga =
 
                 | PersistentLifecycleEvent ReplaySucceed ,_->
                     SagaStarter.subscriber mediator mailbox
-                    //  take recovery action for the current state
+                    //  take recovery action for the final state
                     return! set state
 
                 | Recovering mailbox (:? Event as e), _ ->
@@ -123,6 +124,7 @@ module OrderSaga =
 
                 | Persisted mailbox (:? Event as e ), _->
                     match e with
+                    //take entry actions of new state
                     | StateChanged (ProcessingOrder o) ->
                         let rawGuid = (mailbox.Self.Path.Name |> SagaStarter.toRawoGuid)
                         let delivery = Delivery.factory <| "Delivery_" + rawGuid
@@ -130,18 +132,24 @@ module OrderSaga =
                             ({ Command =  Delivery.StartDelivery o;
                                 CreationDate = System.DateTime.Now;
                                 CorrelationId = Some rawGuid} |> Common.Command)
-                        //take entry actions of new state
                         return! set state
 
                     | _ -> return! set state
                 | :? Common.Event<Order.Event> as orderEvent, _ ->
+                    // decide new state
                     match orderEvent with
                     | {Event = Order.OrderPlaced o } ->
-                      // decide new state
                       let state = ProcessingOrder o
                       return! Persist(StateChanged (state)|>box)
 
                     | _ -> return! set state
+
+                | :? Common.Event<Delivery.Event> as deliveryEvent, _ ->
+                    // decide new state
+                    match deliveryEvent with
+                    | {Event = Delivery.Delivered o } ->
+                        mailbox.Parent() <! Passivate(Actor.PoisonPill.Instance)
+
 
                 | _ -> return! set state
             }

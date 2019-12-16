@@ -23,12 +23,14 @@ let handleEvent (envelop : EventEnvelope) =
 
                 let row = Actor.ctx.Main.Orders.Create(address,createTime, location, pizzas, userId)
                 row.Id <- o.OrderId.ToString()
-                Actor.ctx.Main.Offsets.Individuals.Orders.OffsetCount
-                    <- (envelop.Offset :?>Sequence ).Value
-                Actor.ctx.SubmitUpdates()
+
             | _ -> ()
 
         | _ -> ()
+        Actor.ctx.Main.Offsets.Individuals.Orders.OffsetCount
+            <- (envelop.Offset :?>Sequence ).Value
+        Actor.ctx.SubmitUpdates()
+
      with e -> printf "%A" e
 
 
