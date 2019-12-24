@@ -4,6 +4,10 @@ open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection;
 open FBlazorShop.EF
+open Serilog
+open Serilog.Sinks.File
+open Serilog.Sinks.SystemConsole
+open Microsoft.ApplicationInsights.Extensibility
 
 module Program =
     let exitCode = 0
@@ -17,6 +21,15 @@ module Program =
 
     [<EntryPoint>]
     let main args =
+        Log.Logger <-
+          LoggerConfiguration().MinimumLevel.Debug()
+              .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces)
+
+             .WriteTo.File("log.txt", rollingInterval = RollingInterval.Day)
+              .WriteTo.Console()
+              .CreateLogger();
+
+
         let host = CreateHostBuilder(args).Build()
         let scopeFactory = host.Services.GetRequiredService<IServiceScopeFactory>();
         use scope = scopeFactory.CreateScope()

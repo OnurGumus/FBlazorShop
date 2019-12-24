@@ -30,3 +30,6 @@ nuget Akka.Cluster.Tools prerelease
 nuget SQLProvider
 nuget SQLitePCLRaw.core
 nuget System.Data.SQLite.Core
+nuget Serilog.Sinks.ApplicationInsights
+nuget Serilog.Sinks.File
+nuget Serilog.Sinks.Console

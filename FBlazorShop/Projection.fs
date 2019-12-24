@@ -4,11 +4,13 @@ open Akka.Persistence.Query
 open Newtonsoft.Json
 open Domain
 open Common
+open Serilog
 
 let ser = JsonConvert.SerializeObject
 let deser<'t>  = JsonConvert.DeserializeObject<'t>
 
 let handleEvent (envelop : EventEnvelope) =
+    Log.Information ("Handle event {@Envelope}", envelop)
     try
         match envelop.Event with
         | :? Message<Order.Command,Order.Event> as order ->
@@ -41,6 +43,7 @@ open System
 open FBlazorShop.App.Model
 
 let orders () =
+    Log.Information "get orders"
     Actor.ctx.Main.Orders
     |> Seq.map(fun x ->
         {   OrderId = x.Id

@@ -12,3 +12,6 @@ Akka.Cluster.Sharding
 Akkling
 Akka.Persistence.Sqlite
 System.Data.SQLite.Core
+Serilog.Sinks.ApplicationInsights
+Serilog.Sinks.File
+Serilog.Sinks.Console

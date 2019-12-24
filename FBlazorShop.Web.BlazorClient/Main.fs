@@ -90,7 +90,7 @@ let renewTokenCmd (remote : PizzaService) token =
                 | Ok t -> t
                 | _ -> failwith "auth error"
         }
-    Cmd.ofAsync doWork token TokenRenewed (Common.Error >> CommonMessage)
+    Cmd.ofAsync doWork token TokenRenewed (fun _ -> SignOutRequested)
 
 let clearOrder (jsRuntime : IJSRuntime) =
     let doWork () =

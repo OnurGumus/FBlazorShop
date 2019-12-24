@@ -8,7 +8,7 @@ open Actor
 open Akka
 open Common
 open Akka.Cluster.Sharding
-
+open Serilog
 module Order =
     type Command = PlaceOrder of Order
 
@@ -20,6 +20,7 @@ module Order =
         let rec set state =
             actor {
                 let! msg = mailbox.Receive()
+                Log.Information("Message {@MSG}", box msg)
                 match msg, state with
                 | Recovering mailbox (Event {Event = OrderPlaced o}), _ ->
                     return! o |> Some |> set
@@ -35,6 +36,8 @@ module Order =
                     mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
 
                 | Persisted mailbox (Event({Event = OrderPlaced o } as e)), _ ->
+                    Log.Information "persisted"
+
                     SagaStarter.publishEvent mailbox mediator e
                     return! o |> Some |> set
                 | _ -> return Unhandled
@@ -84,6 +87,8 @@ module Delivery =
             }
         set NotStarted
     let init =
+        Log.Information "order init"
+
         AkklingHelpers.entityFactoryFor Actor.system "Delivery"
             <| propsPersist (actorProp (typed Actor.mediator))
             <| false
@@ -173,7 +178,8 @@ let sagaCheck (o : obj)=
 
 let init () =
     SagaStarter.init Actor.system Actor.mediator sagaCheck
-    Order.init |> ignore
-    OrderSaga.init |> ignore
+    Order.init |> printf "%A"
+    Delivery.init |> printf "%A"
+    OrderSaga.init |> printf "%A"
     System.Threading.Thread.Sleep(1000)
 

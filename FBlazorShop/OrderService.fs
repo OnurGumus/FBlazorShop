@@ -10,6 +10,7 @@ open Akkling
 open Domain.Order
 open Domain
 open Common
+open Serilog
 
 type OrderService() =
     interface IOrderService with
@@ -23,8 +24,11 @@ type OrderService() =
                         Command = (order |> PlaceOrder) ;
                         CreationDate = DateTime.Now ;
                         CorrelationId = (corID |> Some )}
-
+                Log.Information "before place"
                 let! res = orderActor <? (commonCommand |> Command)
+                Log.Information "after place"
+
+                do! Async.Sleep(100)
 
                 match res with
                 | {Event = OrderPlaced o }-> return (Ok o.OrderId)

@@ -101,8 +101,8 @@ type public PizzaService(ctx: IRemoteContext) =
                             let token = generateToken email
                             return Ok( { User = email ; Token = token ; TimeStamp = System.DateTime.Now} )
                         | _ ->
-                            for (d:Message -> unit) in MyApp.Dispatchers.Keys do
-                                                 d(SignOutRequested)
+                        //    for (d:Message -> unit) in MyApp.Dispatchers.Keys do
+                          //                       d(SignOutRequested)
 
                             return Error("Invalid login. Try Password as password")
                     }
