@@ -17,32 +17,32 @@ module Order =
         | OrderRejected of Order * reason : string
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
-        let rec set state =
+        let rec set (state : Order option * int)=
             actor {
                 let! msg = mailbox.Receive()
                 Log.Information("Message {@MSG}", box msg)
                 match msg, state with
-                | Recovering mailbox (Event {Event = OrderPlaced o}), _ ->
-                    return! o |> Some |> set
+                | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
+                    return! (o |> Some, version) |> set
 
-                | Command{Command = PlaceOrder o; CorrelationId = ci}, None ->
+                | Command{Command = PlaceOrder o; CorrelationId = ci}, (None,version) ->
                     //call saga starter and wait till it responds
-                    let event = o |> OrderPlaced |> Event.toEvent ci
+                    let event =  Event.toEvent ci (o |> OrderPlaced ) (version + 1)
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
-                | Command {Command = PlaceOrder o; CorrelationId = ci}, Some _ ->
+                | Command {Command = PlaceOrder o; CorrelationId = ci}, (Some _, version) ->
                     //An order can be placed once only
-                    mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
+                    mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version) |> Event)
 
-                | Persisted mailbox (Event({Event = OrderPlaced o } as e)), _ ->
+                | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
                     Log.Information "persisted"
 
                     SagaStarter.publishEvent mailbox mediator e
-                    return! o |> Some |> set
+                    return! ((o |> Some), v) |> set
                 | _ -> return Unhandled
             }
-        set None
+        set ( None ,0)
     let init =
         AkklingHelpers.entityFactoryFor Actor.system "Order"
             <| propsPersist (actorProp (typed Actor.mediator))
@@ -59,20 +59,23 @@ module Delivery =
         | Delivered of Order
       //  | Deliver
       //  | OrderRejected of Order * reason : string
-    type State = NotStarted | Delivering of LatLong * Order | DeliveryCompleted of Order
+    type State =
+        | NotStarted
+        | Delivering of LatLong * Order
+        | DeliveryCompleted of Order
 
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
-        let rec set (state : State) =
+        let rec set (state : State * int) =
             actor {
                 let! msg = mailbox.Receive()
                 match msg, state with
-                | Recovering mailbox (Event {Event = Delivered o}), _ ->
-                    return! o |> DeliveryCompleted |> set
+                | Recovering mailbox (Event {Event = Delivered o; Version = v}), _ ->
+                    return! (o |> DeliveryCompleted,v) |> set
 
-                | Command{Command = StartDelivery o; CorrelationId = ci}, NotStarted ->
+                | Command{Command = StartDelivery o; CorrelationId = ci}, (NotStarted,v) ->
                     //call saga starter and wait till it responds
-                    let event = o |> Delivered |> Event.toEvent ci
+                    let event = Event.toEvent ci ( o |> Delivered ) (v + 1)
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
@@ -80,12 +83,12 @@ module Delivery =
                 //    //An order can be placed once only
                 //    mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
 
-                | Persisted mailbox (Event({Event = Delivered o } as e)), _ ->
+                | Persisted mailbox (Event({Event = Delivered o ; Version  = v} as e)), _ ->
                    SagaStarter.publishEvent mailbox mediator e
-                   return! set (DeliveryCompleted o)
+                   return! set ((DeliveryCompleted o), v)
                 | _ -> return Unhandled
             }
-        set NotStarted
+        set (NotStarted, 0)
     let init =
         Log.Information "order init"
 

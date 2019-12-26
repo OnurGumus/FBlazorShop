@@ -18,11 +18,13 @@ type Event<'Event> = {
     Event : 'Event;
     CreationDate  : DateTime;
     CorrelationId : string option
+    Version : int
 }
-with static member toEvent ci event  = {
+with static member toEvent ci event version = {
         Event = event
         CreationDate = DateTime.Now;
         CorrelationId =  ci
+        Version = version
     }
 
 type IDefaultTag = interface end
