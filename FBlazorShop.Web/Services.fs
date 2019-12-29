@@ -11,6 +11,8 @@ open JWT.Algorithms
 open System.Collections.Generic
 open FBlazorShop.Web.BlazorClient.Main
 open Projection
+open System.Linq
+open System.Linq.Expressions
 
 type public PizzaService(ctx: IRemoteContext) =
         inherit RemoteHandler<BlazorClient.Services.PizzaService>()
@@ -37,23 +39,37 @@ type public PizzaService(ctx: IRemoteContext) =
         member private _.GetService<'T>() : 'T =
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
 
-        member private this.GetItems<'T>() =
+        member private this.GetItems<'T>
+            (filter :Expression<System.Func<'T,bool>> option) take skip () =
                 let repo = this.GetService<IReadOnlyRepo<'T>>()
                 async {
                       let! b =
-                          repo.Queryable
+                          let q = repo.Queryable
+                          let q =
+                              match filter with
+                              | Some f -> q.Where f
+                              | _ -> q
+                          let q =
+                              match take with
+                              | Some t -> q.Take t
+                              | _ -> q
+                          let q =
+                            match skip with
+                            | Some t -> q.Skip t
+                            | _ -> q
+                          q
                           |> repo.ToListAsync
                           |> Async.AwaitTask
                       return b |> List.ofSeq
                 }
         override this.Handler = {
 
-            getSpecials = this.GetItems<PizzaSpecial>
-            getToppings = this.GetItems<Topping>
+            getSpecials = this.GetItems<PizzaSpecial> None None None
+            getToppings = this.GetItems<Topping> None None None
             getOrders  = fun token ->
                              let user = extractUser token
                              async{
-                                 let! orders = this.GetItems<OrderEntity>()
+                                 let! orders = this.GetItems<OrderEntity> None None None ()
                                  let orders = orders |> List.map Projection.toOrder
                                  return orders |> List.filter (fun t-> t.UserId = user)
                              }
@@ -62,7 +78,12 @@ type public PizzaService(ctx: IRemoteContext) =
                 fun token ->
                     let user = extractUser token
                     async{
-                        let! orders = this.GetItems<OrderEntity>()
+                        let filter  =
+                            <@ fun (t : OrderEntity)-> t.UserId = user @>
+                            |>  Common.QuotationHelpers.toLinq
+                            |> Some
+                        let! orders =
+                            this.GetItems<OrderEntity> filter None None ()
                         let orders = orders |> List.map Projection.toOrder
                         return
                             orders
@@ -73,13 +94,16 @@ type public PizzaService(ctx: IRemoteContext) =
                 fun (token, i, v) ->
                     let user = extractUser token
                     async {
-                        let! orders = this.GetItems<OrderEntity>()
-                        let orders = orders |> List.map Projection.toOrder
-                        let status =
+                        let filter  =
+                            <@ fun (t : OrderEntity)->  t.Id = i && t.UserId = user @>
+                            |>  Common.QuotationHelpers.toLinq
+                            |> Some
+                        let! orders = this.GetItems<OrderEntity> filter (Some 1) None ()
+                        return
                             orders
-                            |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user)
+                            |> List.map Projection.toOrder
+                            |> List.tryExactlyOne
                             |> Option.map OrderWithStatus.FromOrder
-                        return status
                     }
 
             renewToken =
