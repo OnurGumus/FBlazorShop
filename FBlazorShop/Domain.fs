@@ -20,12 +20,12 @@ module Order =
         let rec set (state : Order option * int)=
             actor {
                 let! msg = mailbox.Receive()
-                Log.Information("Message {@MSG}", box msg)
+                Log.Debug("Message {@MSG}", box msg)
                 match msg, state with
                 | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
                     return! (o |> Some, version) |> set
 
-                | Command{Command = PlaceOrder o; CorrelationId = ci}, (None,version) ->
+                | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
                     //call saga starter and wait till it responds
                     let event =  Event.toEvent ci (o |> OrderPlaced ) (version + 1)
                     SagaStarter.toSendMessage mediator mailbox.Self event
@@ -42,7 +42,7 @@ module Order =
                     return! ((o |> Some), v) |> set
                 | _ -> return Unhandled
             }
-        set ( None ,0)
+        set (None, 0)
     let init =
         AkklingHelpers.entityFactoryFor Actor.system "Order"
             <| propsPersist (actorProp (typed Actor.mediator))
@@ -92,7 +92,7 @@ module Delivery =
     let init =
         Log.Information "order init"
 
-        AkklingHelpers.entityFactoryFor Actor.system "Delivery"
+        AkklingHelpers.entityFactoryFor Actor.system  "Delivery"
             <| propsPersist (actorProp (typed Actor.mediator))
             <| false
 
@@ -155,9 +155,8 @@ module OrderSaga =
                 | :? Common.Event<Delivery.Event> as deliveryEvent, _ ->
                     // decide new state
                     match deliveryEvent with
-                    | {Event = Delivery.Delivered o } ->
+                    | {Event = Delivery.Delivered _ } ->
                         mailbox.Parent() <! Passivate(Actor.PoisonPill.Instance)
-
 
                 | _ -> return! set state
             }
@@ -173,16 +172,16 @@ module OrderSaga =
 
 let sagaCheck (o : obj)=
     match o with
-    | :? Common.Event<Order.Event> as e ->
+    | :? Event<Order.Event> as e ->
         match e with
-        | {Event = Order.OrderPlaced _  }  -> Some OrderSaga.factory
+        | {Event = Order.OrderPlaced _  } -> Some OrderSaga.factory
         | _ -> None
     | _ -> None
 
 let init () =
     SagaStarter.init Actor.system Actor.mediator sagaCheck
-    Order.init |> printf "%A"
-    Delivery.init |> printf "%A"
-    OrderSaga.init |> printf "%A"
+    Order.init |> sprintf "Order initialized: %A" |> Log.Debug
+    Delivery.init |> sprintf "Delivery initialized: %A" |> Log.Debug
+    OrderSaga.init |> sprintf "OrderSaga initialized %A" |> Log.Debug
     System.Threading.Thread.Sleep(1000)
 

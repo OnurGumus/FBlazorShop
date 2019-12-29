@@ -35,7 +35,7 @@ let validateAddress (address : Address) =
 
 type Message =
     | OrderPlaced of Order : Order
-    | OrderAccepted of orderId : string
+    | OrderAccepted of orderId : string * version : int
     | SetAddressName of string
     | SetAddressCity of string
     | SetAddressLine1 of string
@@ -109,7 +109,7 @@ let update remote message (model : Model, commonState : Common.State) =
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd =
             Cmd.ofAsync remote.placeOrder (auth.Token, order)
-                (function Ok id -> OrderAccepted id | Error e -> invalidOp e) raise
+                (function Ok (id, v) -> OrderAccepted (id,v) | Error e -> invalidOp e) raise
         { model with OrderPlaced = true} , cmd, Cmd.none
     | _, (_, Common.AuthState.NotTried)
     | OrderAccepted _ , _ -> invalidOp "should not happen"

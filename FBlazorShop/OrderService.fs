@@ -14,7 +14,7 @@ open Serilog
 
 type OrderService() =
     interface IOrderService with
-        member __.PlaceOrder(order: Order): Task<Result<string,string>> =
+        member __.PlaceOrder(order: Order): Task<Result<(string*int),string>> =
             async {
                 let corID = order.OrderId.ToString()
                 let orderId = sprintf "order_%s" <| corID
@@ -31,14 +31,23 @@ type OrderService() =
                 do! Async.Sleep(100)
 
                 match res with
-                | {Event = OrderPlaced o }-> return (Ok o.OrderId)
+                | {Event = OrderPlaced o ; Version = v}-> return Ok(o.OrderId,v)
                 | {Event = OrderRejected (_ , reason)}-> return (Error reason)
 
             } |> Async.StartImmediateAsTask
+open Projection
 
 type OrderReadOnlyRepo () =
-    interface IReadOnlyRepo<Order> with
-        member _.Queryable: Linq.IQueryable<Order> =
-            Projection.orders().AsQueryable()
-        member _.ToListAsync(query: Linq.IQueryable<Order>): Task<IReadOnlyList<Order>> =
-            query.ToList() :> IReadOnlyList<Order> |> Task.FromResult
+    interface IReadOnlyRepo<OrderEntity> with
+        member _.Queryable: Linq.IQueryable<OrderEntity> =
+            Projection.orders.AsQueryable()
+        member _.ToListAsync(query: Linq.IQueryable<OrderEntity>): Task<IReadOnlyList<OrderEntity>> =
+            query.ToList() :> IReadOnlyList<OrderEntity> |> Task.FromResult
+
+//open Projection
+//type OrderReadOnlyRepo2 () =
+//    interface IReadOnlyRepo<OrdersEntity> with
+//        member _.Queryable: Linq.IQueryable<OrdersEntity> =
+//            Projection.orders2().AsQueryable()
+//        member _.ToListAsync(query: Linq.IQueryable<OrdersEntity>): Task<IReadOnlyList<OrdersEntity>> =
+//            query.ToList() :> IReadOnlyList<OrdersEntity> |> Task.FromResult

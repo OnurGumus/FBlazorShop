@@ -14,7 +14,7 @@ open System
 type Page =
     | Start
     | [<EndPoint "/">] Home of Model : PageModel<Home.Model>
-    | [<EndPoint "/myOrders/{id}">] OrderDetail of id : string * model : PageModel<OrderDetail.Model>
+    | [<EndPoint "/myOrders/{id}/{version}/+">] OrderDetail of id : string * version :int * model : PageModel<OrderDetail.Model>
     | [<EndPoint "/myOrders">] MyOrders of Model : PageModel<MyOrders.Model>
     | [<EndPoint "/checkout">] Checkout of Model : PageModel<Checkout.Model>
 
@@ -48,7 +48,7 @@ and Message=
 let defaultPageModel remote jsRuntime = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
 | Home m ->Router.definePageModel m (Home.init remote jsRuntime|> fst)
-| OrderDetail (key, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then "" else key ) )|> fst)
+| OrderDetail (key,v, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then ("",0) else (key,v) ) )|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
 | Start -> ()
 let router remote jsRuntime = Router.inferWithModel SetPage (fun m -> m.Page) (defaultPageModel remote jsRuntime)
@@ -58,9 +58,9 @@ let initPage  init (model : Model) msg page =
     let page = { Model = pageModel } |> page
     { model with Page  = page; }, Cmd.map msg cmd
 
-let initOrderDetail remote key model =
-    initPage  (OrderDetail.init  (key)) model OrderDetailMsg
-        (fun pageModel -> OrderDetail(key.ToString(), pageModel))
+let initOrderDetail remote (key,v) model =
+    initPage  (OrderDetail.init  (key,v)) model OrderDetailMsg
+        (fun pageModel -> OrderDetail(key.ToString(),v, pageModel))
 
 let initMyOrders remote  model =
     initPage  (MyOrders.init remote) model MyOrdersMsg MyOrders
@@ -164,7 +164,7 @@ let update remote jsRuntime message model =
         when( model.State.Authentication |> function  Common.AuthState.Failed -> true | _ -> false )->
             {model with BufferedCommand = Cmd.ofMsg(message)}, Cmd.ofMsg(CommonMessage Common.AuthenticationRequested)
     | SetPage(MyOrders _), _ -> initMyOrders remote model
-    | SetPage(OrderDetail (key, _)), _ -> initOrderDetail remote (key) model
+    | SetPage(OrderDetail (key,v, _)), _ -> initOrderDetail remote (key,v) model
     | SetPage(Checkout _), Checkout _ -> model, Cmd.none
     | SetPage(Checkout m), _ -> initCheckout remote model m.Model.Order
     | TokenRead t , _ ->  model, renewTokenCmd remote t.Token
@@ -193,10 +193,10 @@ let update remote jsRuntime message model =
     | HomeMsg msg, Home homeModel ->
         genericUpdate (Home.update remote jsRuntime)(homeModel.Model) msg HomeMsg Home
 
-    | CheckoutMsg (Checkout.Message.OrderAccepted o), _  ->
-        let orderModel = OrderDetail.init o |> fst
+    | CheckoutMsg (Checkout.Message.OrderAccepted (o,v)), _  ->
+        let orderModel = OrderDetail.init (o,v) |> fst
         let init = { Model = orderModel }
-        model, Cmd.batch[ (o.ToString(),init) |> OrderDetail |> SetPage |> Cmd.ofMsg ; clearOrder jsRuntime]
+        model, Cmd.batch[ (o.ToString(),v, init) |> OrderDetail |> SetPage |> Cmd.ofMsg ; clearOrder jsRuntime]
 
     | CheckoutMsg msg, Checkout model ->
         let u = Checkout.update remote
@@ -206,13 +206,13 @@ let update remote jsRuntime message model =
         when (page |> function | OrderDetail _ -> false | _ -> true) ->
         model, Cmd.none
 
-    | OrderDetailMsg msg, OrderDetail(key, orderModel) ->
+    | OrderDetailMsg msg, OrderDetail(key, v,orderModel) ->
         genericUpdateWithCommon
             (OrderDetail.update remote)
             (orderModel.Model)
             msg
             OrderDetailMsg
-            (fun pageModel -> OrderDetail(key, pageModel))
+            (fun pageModel -> OrderDetail(key, v, pageModel))
 
     | CommonMessage (Common.Message.AuthenticationRequested), _ ->
         let m , cmd = SignIn.update remote SignIn.SignInRequested model.SignIn
@@ -259,7 +259,7 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         | Home (model) ->
           Home.view model.Model (HomeMsg >> dispatch)
         | MyOrders model -> MyOrders.view model.Model (MyOrdersMsg >> dispatch)
-        | OrderDetail(_ ,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
+        | OrderDetail(_ ,_,model) -> OrderDetail.view model.Model (OrderDetailMsg >> dispatch)
         | Checkout m -> Checkout.view m.Model (CheckoutMsg >> dispatch)
         | Start -> h2 [] [text "Loading ..."]
 

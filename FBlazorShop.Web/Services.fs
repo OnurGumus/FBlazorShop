@@ -10,6 +10,7 @@ open System.Security.Cryptography
 open JWT.Algorithms
 open System.Collections.Generic
 open FBlazorShop.Web.BlazorClient.Main
+open Projection
 
 type public PizzaService(ctx: IRemoteContext) =
         inherit RemoteHandler<BlazorClient.Services.PizzaService>()
@@ -37,7 +38,6 @@ type public PizzaService(ctx: IRemoteContext) =
             downcast ctx.HttpContext.RequestServices.GetService(typeof<'T>)
 
         member private this.GetItems<'T>() =
-            fun () ->
                 let repo = this.GetService<IReadOnlyRepo<'T>>()
                 async {
                       let! b =
@@ -48,12 +48,13 @@ type public PizzaService(ctx: IRemoteContext) =
                 }
         override this.Handler = {
 
-            getSpecials = this.GetItems<PizzaSpecial>()
-            getToppings = this.GetItems<Topping>()
+            getSpecials = this.GetItems<PizzaSpecial>
+            getToppings = this.GetItems<Topping>
             getOrders  = fun token ->
                              let user = extractUser token
                              async{
-                                 let! orders = this.GetItems<Order>()()
+                                 let! orders = this.GetItems<OrderEntity>()
+                                 let orders = orders |> List.map Projection.toOrder
                                  return orders |> List.filter (fun t-> t.UserId = user)
                              }
 
@@ -61,17 +62,19 @@ type public PizzaService(ctx: IRemoteContext) =
                 fun token ->
                     let user = extractUser token
                     async{
-                        let! orders = this.GetItems<Order>()()
+                        let! orders = this.GetItems<OrderEntity>()
+                        let orders = orders |> List.map Projection.toOrder
                         return
                             orders
                             |> List.filter (fun t-> t.UserId = user)
                             |> List.map OrderWithStatus.FromOrder
                     }
             getOrderWithStatus =
-                fun (token, i) ->
+                fun (token, i, v) ->
                     let user = extractUser token
                     async {
-                        let! orders = this.GetItems<Order>()()
+                        let! orders = this.GetItems<OrderEntity>()
+                        let orders = orders |> List.map Projection.toOrder
                         let status =
                             orders
                             |> List.tryFind(fun t -> t.OrderId = i && t.UserId = user)

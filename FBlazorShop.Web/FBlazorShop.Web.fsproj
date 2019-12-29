@@ -49,16 +49,17 @@
     <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <None Include="SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="net46\SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <None Include="net46\System.Data.SQLite.dll" />
+    <None Include="net46\SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x64e'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <None Include="SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="net46\SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <None Include="net46\SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="pizza.db">

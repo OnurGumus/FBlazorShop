@@ -23,7 +23,7 @@ module Program =
     let main args =
         Log.Logger <-
           LoggerConfiguration().MinimumLevel.Debug()
-              .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces)
+              .WriteTo.ApplicationInsights(TelemetryConfiguration.CreateDefault(), TelemetryConverter.Traces)
 
              .WriteTo.File("log.txt", rollingInterval = RollingInterval.Day)
               .WriteTo.Console()

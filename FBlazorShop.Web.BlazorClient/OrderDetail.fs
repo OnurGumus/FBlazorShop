@@ -6,34 +6,46 @@ open FBlazorShop.Web.BlazorClient.Services
 open Bolero
 open System
 
-type Model = { Order : OrderWithStatus option ; Key : string}
+type Model = { Order : OrderWithStatus option ; Key : string ; Version : int}
 
 
 type Message =
-    | OrderLoaded of id :string  * OrderWithStatus option * bool
+    | OrderLoaded of id :string  * version : int * OrderWithStatus option * bool
     | Reload
 
 let reloadCmd = Cmd.ofMsg Reload
 
-let loadPeriodically remote token id firstTime =
+let loadPeriodically remote token  id version firstTime =
     let doWork i =
-        async{
-            if not firstTime then
-                do! Async.Sleep 4000;
-            return! remote.getOrderWithStatus (token,i)
-    }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,m, false)) (fun _ -> OrderLoaded("",None, true))
+        let rec getOrder delay =
+            async{
+                let! order =  remote.getOrderWithStatus (token,i, version)
+                match order with
+                | Some _ -> return order
+                | _  when delay < 1000 ->
+                    do! Async.Sleep delay
+                    return! getOrder (delay * 2)
+                | _ -> return None
+            }
 
-let init id ={ Order = None; Key = ""}, Cmd.ofMsg (OrderLoaded (id,None, true))
+        async {
+            if not firstTime then
+                do! Async.Sleep 4000
+            return! getOrder 100
+
+        }
+    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,version,m, false)) (fun _ -> OrderLoaded("",0,None, true))
+
+let init (id, version) ={ Order = None; Key = ""; Version = 0}, Cmd.ofMsg (OrderLoaded (id, version,None, true))
 
 let update remote message (model : Model, commonModel: Common.State) =
     match message, commonModel.Authentication with
     | Reload, Common.AuthState.Success auth ->
-        model, loadPeriodically remote auth.Token (model.Key) true, Cmd.none
-    | OrderLoaded(key,_,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
-    | OrderLoaded ("", None,_), _  -> model,Cmd.none, Cmd.none
-    | OrderLoaded (id, order, firstTime), Common.AuthState.Success auth ->
-        { Order =  order; Key = id }, loadPeriodically remote auth.Token id firstTime, Cmd.none
+        model, loadPeriodically remote auth.Token (model.Key) (model.Version) true, Cmd.none
+    | OrderLoaded(key,_,_,_) , Common.AuthState.NotTried -> { model with Key = key }, Cmd.none, Cmd.none
+    | OrderLoaded ("", _,None,_), _  -> model,Cmd.none, Cmd.none
+    | OrderLoaded (id, version,order, firstTime), Common.AuthState.Success auth ->
+        { Order =  order; Key = id ; Version = version}, loadPeriodically remote auth.Token id version firstTime, Cmd.none
     | _ -> failwith ""
 
 open Bolero.Html

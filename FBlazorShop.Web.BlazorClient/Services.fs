@@ -11,8 +11,8 @@ type public PizzaService =
         getToppings : unit -> Async<Topping list>
         getOrders : string -> Async<Order list>
         getOrderWithStatuses : string -> Async<OrderWithStatus list>
-        getOrderWithStatus : string * string -> Async<OrderWithStatus option>
-        placeOrder : string * Order -> Async<Result<string,string>>
+        getOrderWithStatus : string * string * int -> Async<OrderWithStatus option>
+        placeOrder : string * Order -> Async<Result<(string*int),string>>
         signIn : string * string -> Async<Result<Authentication,string>>
         renewToken : string -> Async<Result<Authentication,string>>
     }

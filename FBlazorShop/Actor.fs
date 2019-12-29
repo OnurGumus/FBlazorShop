@@ -145,27 +145,5 @@ let mat = ActorMaterializer.Create(system);
 open FSharp.Data.Sql
 open System.Runtime.InteropServices
 
-[<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\net46"
-
-[<Literal>]
-let connectionString =
-    @"Data Source=" + __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\pizza.db;"
-
-type Sql =
-    SqlDataProvider<
-            Common.DatabaseProviderTypes.SQLITE,
-            SQLiteLibrary = Common.SQLiteLibrary.SystemDataSQLite,
-            ConnectionString = connectionString,
-            ResolutionPath = resolutionPath,
-            CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>
-
-if not System.Environment.Is64BitProcess then
-    let path = System.Environment.CurrentDirectory
-    NativeLibrary.Load(Path.Combine(path, @"net46\SQLite.Interop.dll")) |>ignore
-
-let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
-
-
 
 

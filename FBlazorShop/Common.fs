@@ -151,3 +151,36 @@ module SagaStarter =
         typed mediator <! (sagaStarter |> untyped |> Put)
 
 
+module QuotationHelpers =
+
+    open Microsoft.FSharp.Quotations
+    open Microsoft.FSharp.Quotations.Patterns
+    open Microsoft.FSharp.Quotations.DerivedPatterns
+
+    open ExprShape
+    open System.Linq.Expressions
+    open System
+    open Microsoft.FSharp.Linq.RuntimeHelpers
+
+    let subst expression newType =
+        let newVar name = Var.Global(name,newType)
+
+        let rec substituteExpr expression  =
+            match expression with
+            | Call(Some (ShapeVar var),mi,other) ->
+              Expr.Call(Expr.Var(newVar var.Name), newType.GetMethod(mi.Name),other)
+            | PropertyGet (Some (ShapeVar var)  ,pi, _) ->
+                Expr.PropertyGet(Expr.Var( newVar var.Name), newType.GetProperty(pi.Name),[])
+            | ShapeVar var -> Expr.Var <| newVar var.Name
+            | ShapeLambda (var, expr) ->
+                Expr.Lambda (newVar var.Name, substituteExpr expr)
+            | ShapeCombination(shapeComboObject, exprList) ->
+                RebuildShapeCombination(shapeComboObject, List.map substituteExpr exprList)
+        substituteExpr expression
+
+
+    let toLinq (expr : Expr<'a -> 'b>) =
+      let linq = LeafExpressionConverter.QuotationToExpression expr
+      let call = linq :?> MethodCallExpression
+      let lambda = call.Arguments.[0] :?> LambdaExpression
+      Expression.Lambda<Func<'a, 'b>>(lambda.Body, lambda.Parameters)
