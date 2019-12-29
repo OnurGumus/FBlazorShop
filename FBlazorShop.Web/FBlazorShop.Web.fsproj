@@ -11,8 +11,7 @@
     <Platforms>AnyCPU;x86;x64</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DefineConstants>
-    </DefineConstants>
+    <DefineConstants>WASM</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
     <DefineConstants>
@@ -35,6 +34,7 @@
     <EmbeddedResource Remove="Shared\**" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TagHelperComponents.fs" />
     <Compile Include="Services.fs" />
     <Compile Include="Startup.fs" />
     <Compile Include="Program.fs" />
