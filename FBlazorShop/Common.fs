@@ -13,18 +13,20 @@ type Command<'Command> = {
     CreationDate  : DateTime;
     CorrelationId : string option
 }
-
+type IsFirstTime = FirstTime | NotFirstTime
 type Event<'Event> = {
     Event : 'Event;
     CreationDate  : DateTime;
     CorrelationId : string option
     Version : int
+    IsFirstTime : IsFirstTime
 }
-with static member toEvent ci event version = {
+with static member toEvent ci event version isFirstTime = {
         Event = event
         CreationDate = DateTime.Now;
         CorrelationId =  ci
         Version = version
+        IsFirstTime = isFirstTime
     }
 
 type IDefaultTag = interface end
@@ -162,7 +164,7 @@ module QuotationHelpers =
     open System
     open Microsoft.FSharp.Linq.RuntimeHelpers
 
-    let subst expression newType =
+    let subst newType expression  =
         let newVar name = Var.Global(name,newType)
 
         let rec substituteExpr expression  =

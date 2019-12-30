@@ -9,10 +9,16 @@ open Akka
 open Common
 open Akka.Cluster.Sharding
 open Serilog
+open System
+
 module Order =
-    type Command = PlaceOrder of Order
+    type Command =
+        | PlaceOrder of Order
+        | GetOrderDetails
 
     type Event =
+        | NoOrdersPlaced
+        | OrderDetailsFound of Order
         | OrderPlaced of Order
         | OrderRejected of Order * reason : string
 
@@ -25,19 +31,31 @@ module Order =
                 | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
                     return! (o |> Some, version) |> set
 
+                | Command{Command = GetOrderDetails}, (None, v) ->
+                    let event = Event.toEvent None NoOrdersPlaced v FirstTime
+                    SagaStarter.toSendMessage mediator mailbox.Self event
+                    SagaStarter.publishEvent mailbox mediator event
+                    return! set state
+
+                | Command{Command = GetOrderDetails}, (Some o, v) ->
+                    let event = Event.toEvent None (OrderDetailsFound o) v FirstTime
+                    SagaStarter.publishEvent mailbox mediator event
+                    return! set state
+
+
                 | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
                     //call saga starter and wait till it responds
-                    let event =  Event.toEvent ci (o |> OrderPlaced ) (version + 1)
+                    let event =  Event.toEvent ci (o |> OrderPlaced ) (version + 1) FirstTime
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
                 | Command {Command = PlaceOrder o; CorrelationId = ci}, (Some _, version) ->
                     //An order can be placed once only
-                    mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version) |> Event)
+                    mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version FirstTime) |> Event)
+                    return! set state
 
                 | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
                     Log.Information "persisted"
-
                     SagaStarter.publishEvent mailbox mediator e
                     return! ((o |> Some), v) |> set
                 | _ -> return Unhandled
@@ -75,7 +93,7 @@ module Delivery =
 
                 | Command{Command = StartDelivery o; CorrelationId = ci}, (NotStarted,v) ->
                     //call saga starter and wait till it responds
-                    let event = Event.toEvent ci ( o |> Delivered ) (v + 1)
+                    let event = Event.toEvent ci ( o |> Delivered ) (v + 1) FirstTime
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
@@ -123,6 +141,20 @@ module OrderSaga =
                 | PersistentLifecycleEvent ReplaySucceed ,_->
                     SagaStarter.subscriber mediator mailbox
                     //  take recovery action for the final state
+                    match state with
+                    | Started ->
+                        let orderActor =
+                            mailbox.Self.Path.Name
+                            |> SagaStarter.toOriginatorName
+                            |> Order.factory
+
+                        let command = {
+                            Command = Order.Command.GetOrderDetails
+                            CreationDate = DateTime.Now
+                            CorrelationId = None} |> Message.Command
+                        orderActor <! command
+
+                    | _ -> ()
                     return! set state
 
                 | Recovering mailbox (:? Event as e), _ ->
@@ -146,9 +178,13 @@ module OrderSaga =
                 | :? Common.Event<Order.Event> as orderEvent, _ ->
                     // decide new state
                     match orderEvent with
-                    | {Event = Order.OrderPlaced o } ->
+                    | {Event = Order.OrderPlaced o }
+                    | {Event = Order.OrderDetailsFound o } ->
                       let state = ProcessingOrder o
                       return! Persist(StateChanged (state)|>box)
+
+                    | {Event = Order.NoOrdersPlaced } ->
+                         mailbox.Parent() <! Passivate(Actor.PoisonPill.Instance)
 
                     | _ -> return! set state
 
@@ -174,7 +210,7 @@ let sagaCheck (o : obj)=
     match o with
     | :? Event<Order.Event> as e ->
         match e with
-        | {Event = Order.OrderPlaced _  } -> Some OrderSaga.factory
+        | {Event = Order.OrderPlaced _ ; IsFirstTime = FirstTime } -> Some OrderSaga.factory
         | _ -> None
     | _ -> None
 
