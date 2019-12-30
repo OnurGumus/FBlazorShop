@@ -31,14 +31,13 @@ module Order =
                 | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
                     return! (o |> Some, version) |> set
 
-                | Command{Command = GetOrderDetails}, (None, v) ->
+                | Command{Command = GetOrderDetails;CorrelationId = ci}, (None, v) ->
                     let event = Event.toEvent None NoOrdersPlaced v FirstTime
-                    SagaStarter.toSendMessage mediator mailbox.Self event
                     SagaStarter.publishEvent mailbox mediator event
                     return! set state
 
-                | Command{Command = GetOrderDetails}, (Some o, v) ->
-                    let event = Event.toEvent None (OrderDetailsFound o) v FirstTime
+                | Command{Command = GetOrderDetails; CorrelationId = ci}, (Some o, v) ->
+                    let event = Event.toEvent ci (OrderDetailsFound o) v FirstTime
                     SagaStarter.publishEvent mailbox mediator event
                     return! set state
 
@@ -130,6 +129,8 @@ module OrderSaga =
 
     let actorProp (mediator : IActorRef<_>)(mailbox : Eventsourced<obj>)=
         let rec set (state : State) =
+            let cid = (mailbox.Self.Path.Name |> SagaStarter.toRawGuid)
+
             actor {
                 let! msg = mailbox.Receive()
                 match msg, state with
@@ -151,7 +152,7 @@ module OrderSaga =
                         let command = {
                             Command = Order.Command.GetOrderDetails
                             CreationDate = DateTime.Now
-                            CorrelationId = None} |> Message.Command
+                            CorrelationId = Some cid} |> Message.Command
                         orderActor <! command
 
                     | _ -> ()
@@ -166,12 +167,11 @@ module OrderSaga =
                     match e with
                     //take entry actions of new state
                     | StateChanged (ProcessingOrder o) ->
-                        let rawGuid = (mailbox.Self.Path.Name |> SagaStarter.toRawoGuid)
-                        let delivery = Delivery.factory <| "Delivery_" + rawGuid
+                        let delivery = Delivery.factory <| "Delivery_" + cid
                         delivery<!
                             ({ Command =  Delivery.StartDelivery o;
                                 CreationDate = System.DateTime.Now;
-                                CorrelationId = Some rawGuid} |> Common.Command)
+                                CorrelationId = Some cid} |> Common.Command)
                         return! set state
 
                     | _ -> return! set state

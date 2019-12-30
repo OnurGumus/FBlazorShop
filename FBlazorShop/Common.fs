@@ -45,7 +45,7 @@ module SagaStarter =
             first.Substring(index + 1)
         else
             first
-    let toRawoGuid name =
+    let toRawGuid name =
         let originatorName = name |> toOriginatorName
         let index = originatorName.IndexOf('_')
         originatorName.Substring(index + 1)
