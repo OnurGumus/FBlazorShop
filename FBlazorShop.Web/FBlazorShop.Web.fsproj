@@ -8,7 +8,7 @@
     <PreserveCompilationReferences>true</PreserveCompilationReferences>
     <PreserveCompilationContext>true</PreserveCompilationContext>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Platforms>AnyCPU;x86;x64</Platforms>
+    <Platforms>x86;x64</Platforms>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <DefineConstants></DefineConstants>
@@ -24,7 +24,7 @@
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-    <DefineConstants>WASM</DefineConstants>
+    <DefineConstants></DefineConstants>
     <PlatformTarget>x86</PlatformTarget>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
@@ -49,25 +49,10 @@
     <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="net46\System.Data.SQLite.dll" />
-    <None Include="net46\SQLite.Interop.dll" Condition="'$(Configuration)|$(Platform)'=='Debug|x64e'">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="net46\SQLite.Interop.dll" CopyToPublishDirectory="PreserveNewest" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="pizza.db">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="System.Data.SQLite.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+
     <Folder Include="wwwroot\_content\FBlazorShop.Web.BlazorClient\" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

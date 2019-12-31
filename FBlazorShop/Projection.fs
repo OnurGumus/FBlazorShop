@@ -14,7 +14,7 @@ open FSharp.Data.Sql.Common
 open Serilog
 
 [<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web"
+let resolutionPath = __SOURCE_DIRECTORY__ + @"\.."
 
 [<Literal>]
 let connectionString =
@@ -28,9 +28,9 @@ type Sql =
             ResolutionPath = resolutionPath,
             CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>
 
-if System.Environment.Is64BitProcess then
-    let path = System.Environment.CurrentDirectory
-    NativeLibrary.Load(Path.Combine(path, @"net46\SQLite.Interop.dll")) |>ignore
+//if System.Environment.Is64BitProcess then
+//    let path = System.Environment.CurrentDirectory
+//    NativeLibrary.Load(Path.Combine(path, @"net46\SQLite.Interop.dll")) |>ignore
 
 let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
 
