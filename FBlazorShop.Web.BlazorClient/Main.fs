@@ -10,6 +10,7 @@ open Bolero
 open Newtonsoft.Json
 open FBlazorShop.App.Model
 open System
+open Serilog
 
 type Page =
     | Start
@@ -332,12 +333,12 @@ type MyApp() =
         |> Program.withRouter router
     //    |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
 #if DEBUG
-        |> Program.withTrace(fun msg model -> System.Console.WriteLine(msg))
+        |> Program.withTrace(fun msg model -> Log.Debug("{@MSG}",msg))
         |> Program.withConsoleTrace
         |> Program.withErrorHandler
             (fun (x,y) ->
-                Console.WriteLine("Error Message:" + x)
-                Console.WriteLine("Exception:" + y.ToString()))
+                Log.Error("Error Message: {@Error}" ,x)
+                Log.Error(y,"Exception"))
 
         |> Program.withHotReload
 #endif

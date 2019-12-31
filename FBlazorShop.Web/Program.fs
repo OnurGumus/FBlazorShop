@@ -22,12 +22,12 @@ module Program =
     [<EntryPoint>]
     let main args =
         Log.Logger <-
-          LoggerConfiguration().MinimumLevel.Debug()
-              .WriteTo.ApplicationInsights(TelemetryConfiguration.CreateDefault(), TelemetryConverter.Traces)
-
-             .WriteTo.File("log.txt", rollingInterval = RollingInterval.Day)
-              .WriteTo.Console()
-              .CreateLogger();
+          LoggerConfiguration().MinimumLevel.Information()
+            .WriteTo.ApplicationInsights(TelemetryConfiguration.CreateDefault(), TelemetryConverter.Traces)
+            .Destructure.FSharpTypes()
+            .WriteTo.File("log.txt", rollingInterval = RollingInterval.Day)
+            .WriteTo.Console()
+            .CreateLogger();
 
 
         let host = CreateHostBuilder(args).Build()

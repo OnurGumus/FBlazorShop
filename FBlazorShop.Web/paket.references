@@ -15,3 +15,4 @@ System.Data.SQLite.Core
 Serilog.Sinks.ApplicationInsights
 Serilog.Sinks.File
 Serilog.Sinks.Console
+Destructurama.FSharp

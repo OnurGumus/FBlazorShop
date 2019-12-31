@@ -38,7 +38,7 @@ module Order =
                 | Command{Command = MarkAsDelivered;CorrelationId = ci},
                     (Some ( (* { DeliveryStatus = DeliveryStatus.OutForDelivery} as *) o), v) ->
 
-                     let event = Event.toEvent ci (MarkedDelivered o) (v + 1)
+                     let event = Event.toEvent ci (MarkedDelivered {o with DeliveryStatus = Delivered ; Version = v + 1}) (v + 1)
                      SagaStarter.toSendMessage mediator mailbox.Self event
                      return! event |> Event |> Persist
 
@@ -49,7 +49,7 @@ module Order =
                      SagaStarter.publishEvent mailbox mediator event
 
                 | Command{Command = SetCurrentLocation(latLong);CorrelationId = ci}, (Some o, v) ->
-                    let event = Event.toEvent ci (LocationUpdated (o,latLong)) (v + 1)
+                    let event = Event.toEvent ci (LocationUpdated ({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v + 1},latLong)) (v + 1)
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
@@ -66,7 +66,7 @@ module Order =
 
                 | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
                     //call saga starter and wait till it responds
-                    let event =  Event.toEvent ci (o |> OrderPlaced ) (version + 1)
+                    let event =  Event.toEvent ci ({o with Version = version + 1} |> OrderPlaced ) (version + 1)
                     SagaStarter.toSendMessage mediator mailbox.Self event
                     return! event |> Event |> Persist
 
@@ -78,17 +78,15 @@ module Order =
                 | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
                     Log.Information "persisted"
                     SagaStarter.publishEvent mailbox mediator e
-                    return! (({o with Version = v} |> Some), v) |> set
+                    return! (Some o, v) |> set
 
                 | Persisted mailbox (Event({Event = MarkedDelivered o ; Version = v} as e)), _ ->
                     SagaStarter.publishEvent mailbox mediator e
-                    return! (({o with DeliveryStatus = Delivered ; Version = v} |> Some), v) |> set
+                    return! (Some o, v) |> set
 
-                | Persisted mailbox (Event({Event = LocationUpdated (o,latLong) ; Version = v} as e)), _ ->
+                | Persisted mailbox (Event({Event = LocationUpdated (o,_) ; Version = v} as e)), _ ->
                     SagaStarter.publishEvent mailbox mediator e
-                    return!
-                        (({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v}
-                        |> Some), v) |> set
+                    return! (Some o, v) |> set
                 | _ -> return Unhandled
             }
         set (None, 0)

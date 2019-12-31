@@ -5,3 +5,5 @@ Microsoft.AspNetCore.Blazor.Build
 Bolero.Build
 Microsoft.AspNetCore.Blazor.DevServer
 Newtonsoft.Json
+Serilog
+Destructurama.FSharp
