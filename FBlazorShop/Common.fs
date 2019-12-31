@@ -103,14 +103,31 @@ module SagaStarter =
         | :? SubscribeAck as s when s.Subscribe.Topic = originatorName -> Some msg
         | _ -> None
 
-    let actorProp (sagaCheck : obj -> ((string -> IEntityRef<_>) option)) (mailbox : Actor<_>)=
+    let actorProp (sagaCheck : obj -> (((string -> IEntityRef<_>) * string) list)) (mailbox : Actor<_>)=
         let rec set (state  : Map<string, (Actor.IActorRef * string list)>) =
 
-            let startSaga (originator : Actor.IActorRef) (factory : string -> IEntityRef<_>) =
+            let startSaga (originator : Actor.IActorRef) (list : (( string -> IEntityRef<_>) * string ) list)=
                 let sender = untyped <| mailbox.Sender()
-                let saga = originator.Path.Name |> toSagaName |> factory
-                let state = state.Add(originator.Path.Name,(sender,[saga.EntityId]))
-                saga <! box(ShardRegion.StartEntity (saga.EntityId))
+                let sagas =[
+                    for (factory, prefix) in list do
+                        let saga =
+                            originator.Path.Name
+                            |> toSagaName
+                            |> fun name ->
+                                match prefix with
+                                | null
+                                | "" -> name
+                                | other -> sprintf "%s_%s" other name
+                            |> factory
+                        saga <! box(ShardRegion.StartEntity (saga.EntityId))
+                        yield saga.EntityId
+                    ]
+                let name = originator.Path.Name
+                let state =
+                    match state.TryFind(name) with
+                    | None -> state.Add(name, (sender, sagas))
+                    | Some (_,list) ->
+                        state.Remove(name).Add(name,(sender, list @ sagas))
                 state
 
             actor {
@@ -149,10 +166,11 @@ module SagaStarter =
 
                 | Command(CheckSagas (o, originator)) ->
                     match sagaCheck o with
-                    | Some factory ->  return! set <| startSaga originator factory
-                    | _ ->
+                    | [] ->
                         mailbox.Sender() <! SagaCheckDone
                         return! set state
+                    | list ->  return! set <| startSaga originator list
+
                 | _ -> return! Unhandled
 
             }

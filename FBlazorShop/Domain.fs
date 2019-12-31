@@ -206,7 +206,7 @@ module OrderSaga =
                                 CorrelationId = Some cid} |> Message.Command
                             orderActor <! command
                             return! set state
-                        | ProcessingOrder o ->
+                        | ProcessingOrder _ ->
                             deliveryActor<!
                                 ({ Command =  Delivery.GetDeliveryStatus
                                    CreationDate = System.DateTime.Now
@@ -279,9 +279,9 @@ let sagaCheck (o : obj)=
     match o with
     | :? Event<Order.Event> as e ->
         match e with
-        | {Event = Order.OrderPlaced _} -> Some OrderSaga.factory
-        | _ -> None
-    | _ -> None
+        | {Event = Order.OrderPlaced _} -> [ (OrderSaga.factory, "")]
+        | _ -> []
+    | _ -> []
 
 let init () =
     SagaStarter.init Actor.system Actor.mediator sagaCheck

@@ -33,4 +33,4 @@ nuget System.Data.SQLite.Core
 nuget Serilog.Sinks.ApplicationInsights
 nuget Serilog.Sinks.File
 nuget Serilog.Sinks.Console
-nuget Destructurama.FSharp prerelease
+nuget Destructurama.FSharp >= 1.1.1-dev-00033
