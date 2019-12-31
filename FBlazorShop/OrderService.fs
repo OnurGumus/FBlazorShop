@@ -33,6 +33,7 @@ type OrderService() =
                 match res with
                 | {Event = OrderPlaced o ; Version = v}-> return Ok(o.OrderId,v)
                 | {Event = OrderRejected (_ , reason)}-> return (Error reason)
+                | _ -> return failwith "not supported"
 
             } |> Async.StartImmediateAsTask
 open Projection

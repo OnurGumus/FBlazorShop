@@ -13,20 +13,17 @@ type Command<'Command> = {
     CreationDate  : DateTime;
     CorrelationId : string option
 }
-type IsFirstTime = FirstTime | NotFirstTime
 type Event<'Event> = {
     Event : 'Event;
     CreationDate  : DateTime;
     CorrelationId : string option
     Version : int
-    IsFirstTime : IsFirstTime
 }
-with static member toEvent ci event version isFirstTime = {
+with static member toEvent ci event version = {
         Event = event
         CreationDate = DateTime.Now;
         CorrelationId =  ci
         Version = version
-        IsFirstTime = isFirstTime
     }
 
 type IDefaultTag = interface end
@@ -63,7 +60,9 @@ module SagaStarter =
     type Command  =
         | CheckSagas of obj * originator : Actor.IActorRef
         | Continue
-    type Event = SagaCheckDone
+        | AreYouTheStarter
+
+    type Event = SagaCheckDone | StartedByMe | NotStaredByMe
     type Message =
           | Command of Command
           | Event of Event
@@ -75,7 +74,7 @@ module SagaStarter =
     let toSendMessage  mediator (originator : IActorRef<_>) event  =
         let message = Send(SagaStarterPath, (event, untyped originator) |> toCheckSagas)
         (mediator <? (message |> box)) |> Async.RunSynchronously |> function
-        | SagaCheckDone -> ()
+        | SagaCheckDone -> () | e -> invalidOp (e.ToString())
 
 
     let publishEvent (mailbox : Eventsourced<_>) (mediator:IActorRef<_>) event=
@@ -90,6 +89,9 @@ module SagaStarter =
         mediator <! box (Publish(self.Path.Name, event))
     let cont (mediator : IActorRef<_>) =
         mediator <! box (Send(SagaStarterPath, Continue |> Command))
+
+    let checkStarted (mediator : IActorRef<_>) =
+          mediator <! box (Send(SagaStarterPath, AreYouTheStarter |> Command))
 
     let subscriber (mediator : IActorRef<_>) (mailbox : Eventsourced<_>) =
         let originatorName = mailbox.Self.Path.Name |> toOriginatorName
@@ -113,6 +115,18 @@ module SagaStarter =
 
             actor {
                 match! mailbox.Receive() with
+                | Command (AreYouTheStarter) ->
+                    //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
+                    let sender = untyped <| mailbox.Sender()
+                    let originName = sender.Path.Name |> toOriginatorName
+                    //weird bug cause an NRE with TryGet
+                    let matchFound = state.ContainsKey(originName)
+                    if not matchFound then
+                        mailbox.Sender() <! Event.NotStaredByMe
+                    else
+                        mailbox.Sender() <! Event.StartedByMe
+                    return! set state
+
                 | Command (Continue) ->
                     //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
                     let sender = untyped <| mailbox.Sender()

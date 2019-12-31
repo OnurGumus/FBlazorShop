@@ -38,9 +38,24 @@ let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
 QueryEvents.SqlQueryEvent |> Event.add (fun sql -> Log.Debug ("Executing SQL: {SQL}",sql))
 
 
+open FBlazorShop.App.Model
 
 let ser = JsonConvert.SerializeObject
 let deser<'t>  = JsonConvert.DeserializeObject<'t>
+
+let markAsDelivered (o: Order) =
+    let maybe = query {
+        for p in ctx.Main.Orders do
+        where (p.Id = o.OrderId)
+        select (Some p)
+        exactlyOneOrDefault
+    }
+    match maybe with
+    | Some order ->
+        order.DeliveryStatus <- DeliveryStatus.Delivered |> ser
+        order.Version <- o.Version |> int64
+        ctx.SubmitUpdates()
+    | None -> ()
 
 let handleEvent (envelop : EventEnvelope) =
     Log.Information ("Handle event {@Envelope}", envelop)
@@ -49,14 +64,17 @@ let handleEvent (envelop : EventEnvelope) =
         | :? Message<Order.Command,Order.Event> as order ->
 
             match order with
-            | Event({Event = Order.OrderPlaced o; Version = v}) ->
+            | Event({Event = Order.MarkedDelivered o}) ->
+                markAsDelivered o
+            | Event({Event = Order.OrderPlaced o}) ->
                 let address = o.DeliveryAddress |> ser
                 let location = o.DeliveryLocation |> ser
                 let pizzas = o.Pizzas |> ser
                 let createTime = o.CreatedTime.ToString("o")
                 let userId = o.UserId
-
-                let row = ctx.Main.Orders.Create(address,createTime, location, pizzas, userId,int64 v)
+                let deliveryStatus = o.DeliveryStatus |> ser
+                let currentLocation = o.CurrentLocation |> ser
+                let row = ctx.Main.Orders.Create(address,createTime, currentLocation,  location, deliveryStatus,pizzas, userId,int64 o.Version)
                 row.Id <- o.OrderId.ToString()
 
             | _ -> ()
@@ -73,7 +91,7 @@ let initOffset  =
     ctx.Main.Offsets.Individuals.Orders.OffsetCount
 
 open System
-open FBlazorShop.App.Model
+
 type OrderEntity = Sql.dataContext.``main.OrdersEntity``
 
 let toOrder (x:OrderEntity) = {
@@ -83,6 +101,9 @@ let toOrder (x:OrderEntity) = {
     Pizzas = x.Pizzas |> deser
     DeliveryLocation = x.DeliveryLocation |> deser
     UserId = x.UserId
+    DeliveryStatus = x.DeliveryStatus |> deser
+    CurrentLocation = x.CurrentLocation |> deser
+    Version = int x.Version
 }
 
 let orders  =

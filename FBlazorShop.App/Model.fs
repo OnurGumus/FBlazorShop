@@ -79,6 +79,10 @@ with static member  Interpolate (start : LatLong) (endd : LatLong)  proportion =
         Latitude = start.Latitude + (endd.Latitude - start.Latitude) * proportion;
         Longitude = start.Longitude + (endd.Longitude - start.Longitude) * proportion
     }
+type DeliveryStatus =
+    | NotDelivered
+    | OutForDelivery
+    | Delivered
 
 [<CLIMutable>]
 type Order = {
@@ -88,6 +92,10 @@ type Order = {
     DeliveryAddress : Address
     DeliveryLocation : LatLong
     Pizzas : Pizza list
+    Version : int
+    CurrentLocation : LatLong
+    DeliveryStatus : DeliveryStatus
+
 }
 with
     member this.TotalPrice = this.Pizzas.Sum(fun p -> p.TotalPrice)

@@ -65,7 +65,10 @@ let update (remote : PizzaService)  (jsRuntime : IJSRuntime) ( state : Model) (m
                     CreatedTime = System.DateTime.Now
                     DeliveryAddress = Address.Default
                     DeliveryLocation = { Latitude = 51.5001 ; Longitude = -0.1239}
-                    Pizzas = [p]
+                    Pizzas = [p];
+                    Version = 0;
+                    DeliveryStatus = NotDelivered;
+                    CurrentLocation =  { Latitude = 51.5001 ; Longitude = -0.1239}
                 } |> Some
 
         { Order = order }, updatePizzaList jsRuntime order.Value.Pizzas
