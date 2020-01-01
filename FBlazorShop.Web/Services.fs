@@ -95,7 +95,7 @@ type public PizzaService(ctx: IRemoteContext) =
                     let user = extractUser token
                     async {
                         let filter  =
-                            <@ fun (t : OrderEntity)->  t.Id = i && t.UserId = user @>
+                            <@ fun (t : OrderEntity)->  t.Id = i && t.UserId = user && t.Version >= int64 v @>
                             |>  Common.QuotationHelpers.toLinq
                             |> Some
                         let! orders = this.GetItems<OrderEntity> filter (Some 1) None ()
