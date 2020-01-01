@@ -139,4 +139,5 @@ let initialize (db: PizzaStoreContext) =
 
     db.Specials.AddRange specials
     db.Toppings.AddRange toppings
+    db.Offsets.Add { OffsetName = "Orders"; OffsetCount = 0} |> ignore
     db.SaveChanges() |> ignore

@@ -5,7 +5,11 @@ open System.Linq
 open System
 open Newtonsoft.Json
 
-
+[<CLIMutable>]
+type Offset = {
+    OffsetName : string
+    OffsetCount : int
+}
 /// <summary>
 /// Represents a pre-configured template for a pizza a user can order
 /// </summary>
