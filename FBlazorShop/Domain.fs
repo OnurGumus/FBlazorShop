@@ -234,9 +234,9 @@ module OrderSaga =
                 | Persisted mailbox (:? Event as e ), _->
                     match e with
                     //take entry actions of new state
-                    | StateChanged (ProcessingOrder o) ->
+                    | StateChanged (ProcessingOrder o as newState )->
                         deliveryActor<! (startDeliveryCmd o)
-                        return! set state
+                        return! set newState
                     | _ ->  return! set state
                 | :? Common.Event<Order.Event> as orderEvent, _ ->
                     // decide new state
