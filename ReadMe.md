@@ -2,7 +2,7 @@ This is a port of Steve Sanderson's [Pizza Workshop](https://github.com/dotnet-p
 by using F# and Bolero. It also shows an example on How to do CQRS with Event Sourcing using Akka Cluster Sharding. (See how orders are placed on server side)
 
 * Live version working with Server-side blazor is here: https://fblazorshopfast.azurewebsites.net/
-* Live version working with WASM is here: https://fblazorshopwasm.azurewebsites.net/
+* Live version working with WASM is here: https://fblazorshop.azurewebsites.net/
 
 
 ![ScreenShot](FBlazor.png)
