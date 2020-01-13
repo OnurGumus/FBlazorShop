@@ -1,15 +1,16 @@
 ﻿module Domain
 
+
 open FBlazorShop.App.Model
 open Akkling
 open Akkling.Persistence
 open AkklingHelpers
-open Actor
 open Akka
 open Common
 open Akka.Cluster.Sharding
 open Serilog
 open System
+open Akka.Cluster.Tools.PublishSubscribe
 
 module Order =
     type Command =
@@ -26,70 +27,74 @@ module Order =
         | MarkedDelivered of Order
         | LocationUpdated of Order * LatLong
 
-    let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
-        let rec set (state : Order option * int)=
-            actor {
-                let! msg = mailbox.Receive()
-                Log.Debug("Message {@MSG}", box msg)
-                match msg, state with
-                | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
-                    return! (o |> Some, version) |> set
 
-                | Command{Command = MarkAsDelivered;CorrelationId = ci},
-                    (Some ( (* { DeliveryStatus = DeliveryStatus.OutForDelivery} as *) o), v) ->
+    let actorProp (mediator : IActorRef<Publish>) (mailbox : Eventsourced<_>)=
+       let mediatorS = retype mediator
+       let publish  =  SagaStarter.publishEvent mailbox mediator true
+       let sendToSagaStarter =  SagaStarter.toSendMessage mediatorS mailbox.Self
+       let rec set (state : Order option * int)=
+           actor {
+               let! msg = mailbox.Receive()
+               Log.Debug("Message {@MSG}", box msg)
+               match msg, state with
+               | Recovering mailbox (Event {Event = OrderPlaced o; Version = version}), _ ->
+                   return! (o |> Some, version) |> set
 
-                     let event = Event.toEvent ci (MarkedDelivered {o with DeliveryStatus = Delivered ; Version = v + 1}) (v + 1)
-                     SagaStarter.toSendMessage mediator mailbox.Self event
-                     return! event |> Event |> Persist
+               | Command{Command = MarkAsDelivered;CorrelationId =  ci},
+                   (Some ( (* { DeliveryStatus = DeliveryStatus.OutForDelivery} as *) o), v) ->
 
-                | Command{Command = MarkAsDelivered;CorrelationId = ci},
-                    (Some ({ DeliveryStatus = DeliveryStatus.Delivered} as o), v) ->
-
-                     let event = Event.toEvent ci (MarkedDelivered o) (v)
-                     SagaStarter.publishEvent mailbox mediator event
-
-                | Command{Command = SetCurrentLocation(latLong);CorrelationId = ci}, (Some o, v) ->
-                    let event = Event.toEvent ci (LocationUpdated ({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v + 1},latLong)) (v + 1)
-                    SagaStarter.toSendMessage mediator mailbox.Self event
+                    let event = Event.toEvent ci (MarkedDelivered {o with DeliveryStatus = Delivered ; Version = v + 1}) (v + 1)
+                    sendToSagaStarter event  ci
                     return! event |> Event |> Persist
 
-                | Command{Command = GetOrderDetails;CorrelationId = ci}, (None, v) ->
-                    let event = Event.toEvent ci NoOrdersPlaced v
-                    SagaStarter.publishEvent mailbox mediator event
-                    return! set state
+               | Command{Command = MarkAsDelivered;CorrelationId = ci},
+                   (Some ({ DeliveryStatus = DeliveryStatus.Delivered} as o), v) ->
 
-                | Command{Command = GetOrderDetails; CorrelationId = ci}, (Some o, v) ->
-                    let event = Event.toEvent ci (OrderDetailsFound o) v
-                    SagaStarter.publishEvent mailbox mediator event
-                    return! set state
+                   Event.toEvent ci (MarkedDelivered o) (v) |> publish
+                   return! set state
+
+               | Command{Command = SetCurrentLocation(latLong);CorrelationId = ci}, (Some o, v) ->
+                   let event = Event.toEvent ci (LocationUpdated ({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v + 1},latLong)) (v + 1)
+                   sendToSagaStarter event ci
+                   return! event |> Event |> Persist
+
+               | Command{Command = GetOrderDetails;CorrelationId = ci}, (None, v) ->
+                   Event.toEvent ci NoOrdersPlaced v |> publish
+                   return! set state
+
+               | Command{Command = GetOrderDetails; CorrelationId = ci}, (Some o, v) ->
+                   Event.toEvent ci (OrderDetailsFound o) v |> publish
+                   return! set state
 
 
-                | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
-                    //call saga starter and wait till it responds
-                    let event =  Event.toEvent ci ({o with Version = version + 1} |> OrderPlaced ) (version + 1)
-                    SagaStarter.toSendMessage mediator mailbox.Self event
-                    return! event |> Event |> Persist
+               | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
+                   //call saga starter and wait till it responds
+                   let event =  Event.toEvent ci ({o with Version = version + 1} |> OrderPlaced ) (version + 1)
+                   sendToSagaStarter event ci
+                   return! event |> Event |> Persist
 
-                | Command {Command = PlaceOrder o; CorrelationId = ci}, (Some _, version) ->
-                    //An order can be placed once only
-                    mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version ) |> Event)
-                    return! set state
+               | Command {Command = PlaceOrder o; CorrelationId = ci}, (Some _, version) ->
+                   //An order can be placed once only
+                   mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version ) |> Event)
+                   return! Ignore
 
-                | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
-                    Log.Information "persisted"
-                    SagaStarter.publishEvent mailbox mediator e
-                    return! (Some o, v) |> set
+               | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
+                   Log.Information "persisted"
+                   publish e
+                   return! (Some o, v) |> set
 
-                | Persisted mailbox (Event({Event = MarkedDelivered o ; Version = v} as e)), _ ->
-                    SagaStarter.publishEvent mailbox mediator e
-                    return! (Some o, v) |> set
+               | Persisted mailbox (Event({Event = MarkedDelivered o ; Version = v} as e)), _ ->
+                   publish e
+                   return! (Some o, v) |> set
 
-                | Persisted mailbox (Event({Event = LocationUpdated (o,_) ; Version = v} as e)), _ ->
-                    SagaStarter.publishEvent mailbox mediator e
-                    return! (Some o, v) |> set
-                | _ -> return Unhandled
-            }
-        set (None, 0)
+               | Persisted mailbox (Event({Event = LocationUpdated (o,_) ; Version = v} as e)), _ ->
+                   publish e
+                   return! (Some o, v) |> set
+               | _ -> return Unhandled
+           }
+       set (None, 0)
+
+
     let init =
         AkklingHelpers.entityFactoryFor Actor.system "Order"
             <| propsPersist (actorProp (typed Actor.mediator))
@@ -117,6 +122,9 @@ module Delivery =
 
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
+        let mediatorS = retype mediator
+        let publish  =  SagaStarter.publishEvent mailbox mediator true
+        let sendToSagaStarter =  SagaStarter.toSendMessage mediatorS mailbox.Self
         let rec set (state : State * int) =
             actor {
                 let! msg = mailbox.Receive()
@@ -127,7 +135,7 @@ module Delivery =
                 | Command{Command = StartDelivery o; CorrelationId = ci}, (NotStarted,v) ->
                     //call saga starter and wait till it responds
                     let event = Event.toEvent ci ( o |> Delivered ) (v + 1)
-                    SagaStarter.toSendMessage mediator mailbox.Self event
+                    sendToSagaStarter event ci
                     return! event |> Event |> Persist
                 | Command{Command = GetDeliveryStatus; CorrelationId = ci}, (status,v) ->
                     let event =
@@ -136,17 +144,14 @@ module Delivery =
                         | NotStarted -> NoDeliveries
                         | Delivering _ -> DeliveryInProgress
 
-                                 //call saga starter and wait till it responds
+                    //call saga starter and wait till it responds
                     let event = Event.toEvent ci event v
-                    SagaStarter.toSendMessage mediator mailbox.Self event
+                    sendToSagaStarter event ci
                     return! event |> Event |> Persist
 
-                //| Command {Command = PlaceOrder o; CorrelationId = ci}, Some _ ->
-                //    //An order can be placed once only
-                //    mailbox.Sender() <! (OrderRejected(o,"duplicate") |> Event.toEvent ci |> Event)
 
                 | Persisted mailbox (Event({Event = Delivered o ; Version  = v} as e)), _ ->
-                   SagaStarter.publishEvent mailbox mediator e
+                   publish e
                    return! set ((DeliveryCompleted o), v)
                 | _ -> return Unhandled
             }
@@ -178,11 +183,11 @@ module OrderSaga =
             let deliveryActor = Delivery.factory <| "Delivery_" + cid
             let startDeliveryCmd o = ({ Command =  Delivery.StartDelivery o;
                                            CreationDate = System.DateTime.Now;
-                                           CorrelationId = Some cid} |> Common.Command)
+                                           CorrelationId =  cid} |> Common.Command)
             let markDelivered () =
                 ({ Command =  Order.MarkAsDelivered;
                     CreationDate = System.DateTime.Now;
-                    CorrelationId = Some cid} |> Common.Command)
+                    CorrelationId = cid} |> Common.Command)
 
             let orderActor =
                 mailbox.Self.Path.Name
@@ -203,14 +208,14 @@ module OrderSaga =
                             let command = {
                                 Command = Order.Command.GetOrderDetails
                                 CreationDate = DateTime.Now
-                                CorrelationId = Some cid} |> Message.Command
+                                CorrelationId =  cid} |> Message.Command
                             orderActor <! command
                             return! set state
                         | ProcessingOrder _ ->
                             deliveryActor<!
                                 ({ Command =  Delivery.GetDeliveryStatus
                                    CreationDate = System.DateTime.Now
-                                   CorrelationId = Some cid} |> Common.Command)
+                                   CorrelationId =  cid} |> Common.Command)
 
                             return! set state
                     | _ ->  return! set state
