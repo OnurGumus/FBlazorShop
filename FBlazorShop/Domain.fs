@@ -11,7 +11,9 @@ open Akka.Cluster.Sharding
 open Serilog
 open System
 open Akka.Cluster.Tools.PublishSubscribe
-
+[<Literal>]
+let DEFAULT_SHARD = "default-shard"
+let shardResolver = fun _ -> DEFAULT_SHARD
 module Order =
     type Command =
         | PlaceOrder of Order
@@ -96,12 +98,12 @@ module Order =
 
 
     let init =
-        AkklingHelpers.entityFactoryFor Actor.system "Order"
+        AkklingHelpers.entityFactoryFor Actor.system shardResolver "Order"
             <| propsPersist (actorProp (typed Actor.mediator))
             <| false
 
     let factory entityId =
-           init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
+           init.RefFor DEFAULT_SHARD entityId
 
 
 module Delivery =
@@ -159,12 +161,12 @@ module Delivery =
     let init =
         Log.Information "order init"
 
-        AkklingHelpers.entityFactoryFor Actor.system  "Delivery"
+        AkklingHelpers.entityFactoryFor Actor.system shardResolver "Delivery"
             <| propsPersist (actorProp (typed Actor.mediator))
             <| false
 
     let factory entityId =
-           init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
+           init.RefFor DEFAULT_SHARD entityId
 
 module OrderSaga =
     type State =
@@ -273,12 +275,12 @@ module OrderSaga =
         set Started
 
     let init =
-        (AkklingHelpers.entityFactoryFor Actor.system "OrderSaga"
+        (AkklingHelpers.entityFactoryFor Actor.system shardResolver "OrderSaga"
         <| propsPersist (actorProp(typed Actor.mediator))
         <| true)
 
     let factory entityId =
-        init.RefFor AkklingHelpers.DEFAULT_SHARD entityId
+        init.RefFor DEFAULT_SHARD entityId
 
 let sagaCheck (o : obj)=
     match o with

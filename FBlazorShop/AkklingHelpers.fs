@@ -1,37 +1,36 @@
 ﻿module AkklingHelpers
 
-open System
 open Akka.Actor
 open Akka.Cluster.Sharding
-
 open Akkling
 open Akkling.Persistence
 open Akkling.Cluster.Sharding
 
-[<Literal>]
-let DEFAULT_SHARD = "default-shard"
 
-type internal TypedMessageExtractor<'Envelope, 'Message>(extractor: 'Envelope -> string*string*'Message) =
+type Extractor<'Envelope, 'Message> = 'Envelope -> string*string*'Message
+type ShardResolver = string -> string
+
+type internal TypedMessageExtractor<'Envelope, 'Message>(extractor: Extractor<_,'Message>, shardResolver :ShardResolver) =
     interface IMessageExtractor with
         member _.ShardId message =
             match message with
             | :? 'Envelope as env ->
-                let shardId, _, _ = (extractor(env))
+                let shardId, _, _ = extractor env
                 shardId
-            | :? Akka.Cluster.Sharding.ShardRegion.StartEntity  -> DEFAULT_SHARD
+            | :? Akka.Cluster.Sharding.ShardRegion.StartEntity as e -> shardResolver (e.EntityId)
             | _ -> invalidOp <| message.ToString()
         member _.EntityId message =
             match message with
             | :? 'Envelope as env ->
-                let _, entityId, _ = (extractor(env))
+                let _, entityId, _ = extractor env
                 entityId
-            | other -> invalidOp <| string (other)
+            | other -> invalidOp <| string other
         member _.EntityMessage message =
             match message with
             | :? 'Envelope as env ->
-                let _, _, msg = (extractor(env))
+                let _, _, msg = extractor env
                 box msg
-            | other -> invalidOp <| string (other)
+            | other -> invalidOp <| string other
 
 
 // HACK over persistent actors
@@ -48,7 +47,7 @@ let internal adjustPersistentProps (props: Props<'Message>) : Props<'Message> =
     else props
 
 
-let entityFactoryFor (system: ActorSystem) (name: string) (props: Props<'Message>) (rememberEntities) : EntityFac<'Message> =
+let entityFactoryFor (system: ActorSystem) (shardResolver:ShardResolver) (name: string) (props: Props<'Message>) (rememberEntities) : EntityFac<'Message> =
 
     let clusterSharding = ClusterSharding.Get(system)
     let adjustedProps = adjustPersistentProps props
@@ -58,7 +57,7 @@ let entityFactoryFor (system: ActorSystem) (name: string) (props: Props<'Message
         | _ -> ClusterShardingSettings.Create(system);
     let shardRegion =
         clusterSharding.Start(name, adjustedProps.ToProps(),
-            shardSettings, new TypedMessageExtractor<_,_>(EntityRefs.entityRefExtractor))
+            shardSettings, new TypedMessageExtractor<_,_>(EntityRefs.entityRefExtractor, shardResolver))
     { ShardRegion = shardRegion; TypeName = name }
 
 let (|Recovering|_|) (context: Eventsourced<'Message>) (msg: 'Message) : 'Message option =
