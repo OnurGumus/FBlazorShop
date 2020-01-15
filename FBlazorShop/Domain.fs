@@ -11,9 +11,11 @@ open Akka.Cluster.Sharding
 open Serilog
 open System
 open Akka.Cluster.Tools.PublishSubscribe
+
 [<Literal>]
 let DEFAULT_SHARD = "default-shard"
 let shardResolver = fun _ -> DEFAULT_SHARD
+
 module Order =
     type Command =
         | PlaceOrder of Order
@@ -170,6 +172,7 @@ module Delivery =
 
 module OrderSaga =
     type State =
+        | NotStarted
         | Started
         | ProcessingOrder of Order
        // | OutForDelivery of Order
@@ -200,38 +203,31 @@ module OrderSaga =
                 let! msg = mailbox.Receive()
                 match msg, state with
 
-                | :? SagaStarter.Event as starterEvent, _ ->
-
-                    match starterEvent with
-                    | SagaStarter.NotStaredByMe  ->
-                        //take recovery
-                        match state with
-                        | Started ->
-                            let command = {
-                                Command = Order.Command.GetOrderDetails
-                                CreationDate = DateTime.Now
-                                CorrelationId =  cid} |> Message.Command
-                            orderActor <! command
-                            return! set state
-                        | ProcessingOrder _ ->
-                            deliveryActor<!
-                                ({ Command =  Delivery.GetDeliveryStatus
-                                   CreationDate = System.DateTime.Now
-                                   CorrelationId =  cid} |> Common.Command)
-
-                            return! set state
-                    | _ ->  return! set state
                 | SagaStarter.SubscrptionAcknowledged mailbox _, _  ->
                     // notify saga starter about the subscription completed
-                    SagaStarter.cont mediator
-                    return! set state
+                    match state with
+                    | NotStarted ->   return! Started|> StateChanged |>box |> Persist
+                    | Started ->
+                        let command = {
+                            Command = Order.Command.GetOrderDetails
+                            CreationDate = DateTime.Now
+                            CorrelationId =  cid} |> Message.Command
+                        orderActor <! command
+                        return! set state
+
+                    | ProcessingOrder _ ->
+                        deliveryActor<!
+                            ({ Command =  Delivery.GetDeliveryStatus
+                               CreationDate = System.DateTime.Now
+                               CorrelationId =  cid} |> Common.Command)
+
+                        return! set state
 
                 | PersistentLifecycleEvent ReplaySucceed ,_->
                     SagaStarter.subscriber mediator mailbox
-                    SagaStarter.checkStarted mediator
-                    //  take recovery action for the final state
-
                     return! set state
+                   // SagaStarter.checkStarted mediator
+                    //  take recovery action for the final state
 
                 | Recovering mailbox (:? Event as e), _ ->
                     //replay the recovery
@@ -240,6 +236,10 @@ module OrderSaga =
 
                 | Persisted mailbox (:? Event as e ), _->
                     match e with
+                    | StateChanged Started ->
+                     SagaStarter.cont mediator
+                     return! set state
+
                     //take entry actions of new state
                     | StateChanged (ProcessingOrder o as newState )->
                         deliveryActor<! (startDeliveryCmd o)
@@ -272,7 +272,7 @@ module OrderSaga =
 
                 | _ -> return! set state
             }
-        set Started
+        set NotStarted
 
     let init =
         (AkklingHelpers.entityFactoryFor Actor.system shardResolver "OrderSaga"

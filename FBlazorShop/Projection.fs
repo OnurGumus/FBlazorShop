@@ -12,6 +12,9 @@ open Actor
 open System.IO
 open FSharp.Data.Sql.Common
 open Serilog
+open Akka.Persistence.Sqlite
+open Akka.Persistence.Query.Sql
+
 
 [<Literal>]
 let resolutionPath = __SOURCE_DIRECTORY__ + @"\.."
@@ -28,15 +31,10 @@ type Sql =
             ResolutionPath = resolutionPath,
             CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>
 
-//if System.Environment.Is64BitProcess then
-//    let path = System.Environment.CurrentDirectory
-//    NativeLibrary.Load(Path.Combine(path, @"net46\SQLite.Interop.dll")) |>ignore
 
 let ctx = Sql.GetDataContext("Data Source=pizza.db;" )
 
-
 QueryEvents.SqlQueryEvent |> Event.add (fun sql -> Log.Debug ("Executing SQL: {SQL}",sql))
-
 
 open FBlazorShop.App.Model
 
@@ -114,8 +112,14 @@ let orders  =
 
 open Akkling.Streams
 
+
+let readJournal =
+    PersistenceQuery.Get(system)
+        .ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
+
+
 let init () =
-    let source = Actor.readJournal.EventsByTag("default",Offset.Sequence(initOffset))
+    let source = readJournal.EventsByTag("default",Offset.Sequence(initOffset))
     System.Threading.Thread.Sleep(100)
     source
     |> Source.runForEach Actor.mat handleEvent

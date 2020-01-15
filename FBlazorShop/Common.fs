@@ -15,13 +15,10 @@ open System.Text
 
 type PlainNewtonsoftJsonSerializer ( system : ExtendedActorSystem) =
     inherit Serializer(system)
-    let settings =
-        new JsonSerializerSettings(TypeNameHandling = TypeNameHandling.All,
-            MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead)
+
     let ser = new JsonSerializer()
 
     override __.IncludeManifest = true
-
 
     override __.Identifier = 1711234423;
 
@@ -85,13 +82,7 @@ module SagaStarter =
         let index = originatorName.IndexOf('_')
         originatorName.Substring(index + 1)
 
-    let addCid name cid = sprintf "%s!%s" name cid
-
-    let toCid (name : string)  =
-        let bang = name.IndexOf('~')
-        name.Substring(bang,name.Length - bang - 1)
-
-    let toSagaName (name : string) = name.Replace("_","_Saga_")
+    let cidToSagaName (name : string) = name.Replace("_","_Saga_")
     let isSaga (name : string) = name.Contains("_Saga_")
 
     [<Literal>]
@@ -104,9 +95,8 @@ module SagaStarter =
     type Command  =
         | CheckSagas of obj * originator : Actor.IActorRef * cid : string
         | Continue
-        | AreYouTheStarter
 
-    type Event = SagaCheckDone | StartedByMe | NotStaredByMe
+    type Event = SagaCheckDone
     type Message =
           | Command of Command
           | Event of Event
@@ -117,9 +107,7 @@ module SagaStarter =
 
     let toSendMessage  mediator (originator) event  cid =
         let message = Send(SagaStarterPath, (event, untyped originator, cid) |> toCheckSagas)
-        (mediator <? (message )) |> Async.RunSynchronously |> function
-        | SagaCheckDone -> () | e -> invalidOp (e.ToString())
-
+        (mediator <? (message )) |> Async.RunSynchronously |> ignore
 
     let publishEvent (mailbox : Actor<_>) (mediator) replyToSender event=
         let sender = mailbox.Sender()
@@ -135,8 +123,7 @@ module SagaStarter =
     let cont (mediator) =
         mediator <! box (Send(SagaStarterPath, Continue |> Command))
 
-    let checkStarted (mediator) =
-          mediator <! box (Send(SagaStarterPath, AreYouTheStarter |> Command))
+
 
     let subscriber (mediator : IActorRef<_>) (mailbox : Eventsourced<_>) =
         let originatorName = mailbox.Self.Path.Name |> toOriginatorName
@@ -157,7 +144,7 @@ module SagaStarter =
                     for (factory, prefix) in list do
                         let saga =
                             cid
-                            |> toSagaName
+                            |> cidToSagaName
                             |> fun name ->
                                 match prefix with
                                 | null
@@ -177,18 +164,6 @@ module SagaStarter =
 
             actor {
                 match! mailbox.Receive() with
-                | Command (AreYouTheStarter) ->
-                    //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
-                    let sender = untyped <| mailbox.Sender()
-                    let originName = sender.Path.Name |> toOriginatorName
-                    //weird bug cause an NRE with TryGet
-                    let matchFound = state.ContainsKey(originName)
-                    if not matchFound then
-                        mailbox.Sender() <! Event.NotStaredByMe
-                    else
-                        mailbox.Sender() <! Event.StartedByMe
-                    return! set state
-
                 | Command (Continue) ->
                     //check if all sagas are started. if so issue SagaCheckDone to originator else keep wait
                     let sender = untyped <| mailbox.Sender()
@@ -241,7 +216,7 @@ module CommandHandler =
          | :? SubscribeAck as s -> Some s
          | _ -> None
 
-    let actorProp (mediator : IActorRef) (mailbox : Actor<_>)=
+    let actorProp (cmd : obj) (mediator : IActorRef) (mailbox : Actor<_>)=
           let rec set (state : State)=
               actor {
                 let! msg = mailbox.Receive()

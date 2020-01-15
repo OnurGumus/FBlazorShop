@@ -17,7 +17,7 @@ type internal TypedMessageExtractor<'Envelope, 'Message>(extractor: Extractor<_,
             | :? 'Envelope as env ->
                 let shardId, _, _ = extractor env
                 shardId
-            | :? Akka.Cluster.Sharding.ShardRegion.StartEntity as e -> shardResolver (e.EntityId)
+            | :? ShardRegion.StartEntity as e -> shardResolver (e.EntityId)
             | _ -> invalidOp <| message.ToString()
         member _.EntityId message =
             match message with

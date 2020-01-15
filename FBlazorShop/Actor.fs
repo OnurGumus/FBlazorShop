@@ -105,14 +105,8 @@ let mediator = DistributedPubSub.Get(system).Mediator;
 
 SqlitePersistence.Get(system) |> ignore
 
-let readJournal =
-    PersistenceQuery.Get(system)
-        .ReadJournalFor<SqlReadJournal>(SqlReadJournal.Identifier);
-
 let mat = ActorMaterializer.Create(system);
 
-open FSharp.Data.Sql
-open System.Runtime.InteropServices
 
 
 
