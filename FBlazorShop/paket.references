@@ -12,3 +12,5 @@ SQLitePCLRaw.core
 System.Data.SQLite.Core
 Akka.Cluster.Tools
 Serilog
+NodaTime
+NodaTime.Serialization.JsonNet

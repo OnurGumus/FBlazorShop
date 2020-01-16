@@ -11,10 +11,15 @@ open Akka.Cluster.Sharding
 open Serilog
 open System
 open Akka.Cluster.Tools.PublishSubscribe
+open NodaTime
+
+let clockInstance : IClock = upcast SystemClock.Instance
 
 [<Literal>]
 let DEFAULT_SHARD = "default-shard"
 let shardResolver = fun _ -> DEFAULT_SHARD
+
+let toEvent ci  = Common.toEvent clockInstance ci
 
 module Order =
     type Command =
@@ -47,39 +52,39 @@ module Order =
                | Command{Command = MarkAsDelivered;CorrelationId =  ci},
                    (Some ( (* { DeliveryStatus = DeliveryStatus.OutForDelivery} as *) o), v) ->
 
-                    let event = Event.toEvent ci (MarkedDelivered {o with DeliveryStatus = Delivered ; Version = v + 1}) (v + 1)
+                    let event = toEvent ci (MarkedDelivered {o with DeliveryStatus = Delivered ; Version = v + 1}) (v + 1)
                     sendToSagaStarter event  ci
                     return! event |> Event |> Persist
 
                | Command{Command = MarkAsDelivered;CorrelationId = ci},
                    (Some ({ DeliveryStatus = DeliveryStatus.Delivered} as o), v) ->
 
-                   Event.toEvent ci (MarkedDelivered o) (v) |> publish
+                   toEvent ci (MarkedDelivered o) (v) |> publish
                    return! set state
 
                | Command{Command = SetCurrentLocation(latLong);CorrelationId = ci}, (Some o, v) ->
-                   let event = Event.toEvent ci (LocationUpdated ({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v + 1},latLong)) (v + 1)
+                   let event = toEvent ci (LocationUpdated ({o with DeliveryStatus = OutForDelivery; CurrentLocation = latLong; Version = v + 1},latLong)) (v + 1)
                    sendToSagaStarter event ci
                    return! event |> Event |> Persist
 
                | Command{Command = GetOrderDetails;CorrelationId = ci}, (None, v) ->
-                   Event.toEvent ci NoOrdersPlaced v |> publish
+                   toEvent ci NoOrdersPlaced v |> publish
                    return! set state
 
                | Command{Command = GetOrderDetails; CorrelationId = ci}, (Some o, v) ->
-                   Event.toEvent ci (OrderDetailsFound o) v |> publish
+                   toEvent ci (OrderDetailsFound o) v |> publish
                    return! set state
 
 
                | Command{Command = PlaceOrder o; CorrelationId = ci}, (None, version) ->
                    //call saga starter and wait till it responds
-                   let event =  Event.toEvent ci ({o with Version = version + 1} |> OrderPlaced ) (version + 1)
+                   let event =  toEvent ci ({o with Version = version + 1} |> OrderPlaced ) (version + 1)
                    sendToSagaStarter event ci
                    return! event |> Event |> Persist
 
                | Command {Command = PlaceOrder o; CorrelationId = ci}, (Some _, version) ->
                    //An order can be placed once only
-                   mailbox.Sender() <! ( (Event.toEvent ci (OrderRejected(o,"duplicate")) version ) |> Event)
+                   mailbox.Sender() <! ( (toEvent ci (OrderRejected(o,"duplicate")) version ) |> Event)
                    return! Ignore
 
                | Persisted mailbox (Event({Event = OrderPlaced o ; Version = v} as e)), _ ->
@@ -138,7 +143,7 @@ module Delivery =
 
                 | Command{Command = StartDelivery o; CorrelationId = ci}, (NotStarted,v) ->
                     //call saga starter and wait till it responds
-                    let event = Event.toEvent ci ( o |> Delivered ) (v + 1)
+                    let event = toEvent ci ( o |> Delivered ) (v + 1)
                     sendToSagaStarter event ci
                     return! event |> Event |> Persist
                 | Command{Command = GetDeliveryStatus; CorrelationId = ci}, (status,v) ->
@@ -149,7 +154,7 @@ module Delivery =
                         | Delivering _ -> DeliveryInProgress
 
                     //call saga starter and wait till it responds
-                    let event = Event.toEvent ci event v
+                    let event = toEvent ci event v
                     sendToSagaStarter event ci
                     return! event |> Event |> Persist
 
@@ -187,11 +192,11 @@ module OrderSaga =
             let cid = (mailbox.Self.Path.Name |> SagaStarter.toRawGuid)
             let deliveryActor = Delivery.factory <| "Delivery_" + cid
             let startDeliveryCmd o = ({ Command =  Delivery.StartDelivery o;
-                                           CreationDate = System.DateTime.Now;
+                                           CreationDate = clockInstance.GetCurrentInstant();
                                            CorrelationId =  cid} |> Common.Command)
             let markDelivered () =
                 ({ Command =  Order.MarkAsDelivered;
-                    CreationDate = System.DateTime.Now;
+                    CreationDate = clockInstance.GetCurrentInstant();
                     CorrelationId = cid} |> Common.Command)
 
             let orderActor =
@@ -210,7 +215,7 @@ module OrderSaga =
                     | Started ->
                         let command = {
                             Command = Order.Command.GetOrderDetails
-                            CreationDate = DateTime.Now
+                            CreationDate = clockInstance.GetCurrentInstant()
                             CorrelationId =  cid} |> Message.Command
                         orderActor <! command
                         return! set state
@@ -218,7 +223,7 @@ module OrderSaga =
                     | ProcessingOrder _ ->
                         deliveryActor<!
                             ({ Command =  Delivery.GetDeliveryStatus
-                               CreationDate = System.DateTime.Now
+                               CreationDate = clockInstance.GetCurrentInstant()
                                CorrelationId =  cid} |> Common.Command)
 
                         return! set state

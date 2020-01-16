@@ -11,12 +11,15 @@ open Akka.Serialization
 open System.IO
 open Newtonsoft.Json
 open System.Text
-
+open NodaTime
+open NodaTime.Serialization.JsonNet
 
 type PlainNewtonsoftJsonSerializer ( system : ExtendedActorSystem) =
     inherit Serializer(system)
 
     let ser = new JsonSerializer()
+    do
+        ser.ConfigureForNodaTime(DateTimeZoneProviders.Tzdb) |> ignore
 
     override __.IncludeManifest = true
 
@@ -37,20 +40,23 @@ type PlainNewtonsoftJsonSerializer ( system : ExtendedActorSystem) =
         use streamReader = new StreamReader(new MemoryStream(bytes), Encoding.UTF8)
         ser.Deserialize(streamReader, ttype)
 
+
 type Command<'Command> = {
     Command : 'Command
-    CreationDate  : DateTime
+    CreationDate  : Instant
     CorrelationId : string
 }
 type Event<'Event> = {
     Event : 'Event
-    CreationDate  : DateTime
+    CreationDate  : Instant
     CorrelationId : string
     Version : int
 }
-with static member toEvent ci event version = {
+
+
+let toEvent (clockInstance : IClock) ci event version = {
         Event = event
-        CreationDate = DateTime.Now
+        CreationDate = clockInstance.GetCurrentInstant()
         CorrelationId =  ci
         Version = version
     }

@@ -34,3 +34,5 @@ nuget Serilog.Sinks.ApplicationInsights
 nuget Serilog.Sinks.File
 nuget Serilog.Sinks.Console
 nuget Destructurama.FSharp >= 1.1.1-dev-00033
+nuget NodaTime
+nuget NodaTime.Serialization.JsonNet

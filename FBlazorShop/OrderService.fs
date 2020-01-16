@@ -21,7 +21,7 @@ type OrderService() =
                 let commonCommand : Command<_> =
                     {
                         Command = PlaceOrder order
-                        CreationDate = DateTime.Now
+                        CreationDate = Domain.clockInstance.GetCurrentInstant()
                         CorrelationId =  corID }
                 let c =
                     {   Cmd = commonCommand ;
