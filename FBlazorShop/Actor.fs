@@ -3,21 +3,27 @@
 open Akka.Persistence.Sqlite
 open Akkling
 open Akka.Cluster.Tools.Singleton
-open Akka.Persistence.Query
-open Akka.Persistence.Query.Sql
 open Akka.Streams
 open Akka.Persistence.Journal
 open System.Collections.Immutable
 open System
 
-
-
 let configWithPort port =
     let config = Configuration.parse ("""
         akka {
             extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
+            stdout-loglevel = INFO
+               loglevel = INFO
+               log-config-on-start = on
 
             actor {
+            debug {
+                                  receive = on
+                                  autoreceive = on
+                                  lifecycle = on
+                                  event-stream = on
+                                  unhandled = on
+                            }
                 provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
                 serializers {
                     json = "Akka.Serialization.NewtonSoftJsonSerializer"
@@ -85,28 +91,29 @@ let configWithPort port =
     config.WithFallback(ClusterSingletonManager.DefaultConfig())
 
 
-let deft = ImmutableHashSet.Create("default")
-
-
+let defaultTag = ImmutableHashSet.Create("default")
 
 type Tagger  =
     interface IWriteEventAdapter with
         member _.Manifest _ = ""
         member _.ToJournal evt =
-                box <| Tagged(evt, deft)
+                box <| Tagged(evt, defaultTag)
     new () = {}
 
 let system = System.create "cluster-system" (configWithPort 0)
-Akka.Cluster.Cluster.Get(system).SelfAddress
-    |> Akka.Cluster.Cluster.Get(system).Join
+open Akka.Cluster
+
+Cluster.Get(system).SelfAddress |> Cluster.Get(system).Join
 
 open Akka.Cluster.Tools.PublishSubscribe
-let mediator = DistributedPubSub.Get(system).Mediator;
+open Akkling.Persistence
+
+let mediator = DistributedPubSub.Get(system).Mediator
 
 SqlitePersistence.Get(system) |> ignore
 
-let mat = ActorMaterializer.Create(system);
+let mat = ActorMaterializer.Create(system)
 
-
+let subscribeForCommand command = Common.CommandHandler.subscribeForCommand system (typed mediator) command
 
 

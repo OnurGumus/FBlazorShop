@@ -6,26 +6,30 @@ open FBlazorShop.App
 open FBlazorShop.App.Model
 open System.Collections.Generic
 open System.Linq
-open Akkling
 open Domain.Order
-open Domain
 open Common
 open Serilog
+open CommandHandler
 
 type OrderService() =
     interface IOrderService with
         member __.PlaceOrder(order: Order): Task<Result<(string*int),string>> =
             async {
                 let orderId = sprintf "order_%s" <| order.OrderId.ToString()
-                let corID =  orderId + "~" + Guid.NewGuid().ToString()
+                let corID =  orderId |> SagaStarter.toCid
                 let orderActor = factory orderId
                 let commonCommand : Command<_> =
                     {
-                        Command = (order |> PlaceOrder) ;
-                        CreationDate = DateTime.Now ;
+                        Command = PlaceOrder order
+                        CreationDate = DateTime.Now
                         CorrelationId =  corID }
+                let c =
+                    {   Cmd = commonCommand ;
+                        EntityRef = orderActor;
+                        Filter = (function OrderPlaced _ | OrderRejected _ -> true |  _ -> false) } |> Execute
+
                 Log.Information "before place"
-                let! res = orderActor <? (commonCommand |> Command)
+                let! res = Actor.subscribeForCommand c
                 Log.Information "after place"
 
                 do! Async.Sleep(100)
@@ -45,10 +49,3 @@ type OrderReadOnlyRepo () =
         member _.ToListAsync(query: Linq.IQueryable<OrderEntity>): Task<IReadOnlyList<OrderEntity>> =
             query.ToList() :> IReadOnlyList<OrderEntity> |> Task.FromResult
 
-//open Projection
-//type OrderReadOnlyRepo2 () =
-//    interface IReadOnlyRepo<OrdersEntity> with
-//        member _.Queryable: Linq.IQueryable<OrdersEntity> =
-//            Projection.orders2().AsQueryable()
-//        member _.ToListAsync(query: Linq.IQueryable<OrdersEntity>): Task<IReadOnlyList<OrdersEntity>> =
-//            query.ToList() :> IReadOnlyList<OrdersEntity> |> Task.FromResult

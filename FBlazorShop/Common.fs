@@ -82,6 +82,8 @@ module SagaStarter =
         let index = originatorName.IndexOf('_')
         originatorName.Substring(index + 1)
 
+    let toCid name = name + "~" + Guid.NewGuid().ToString()
+
     let cidToSagaName (name : string) = name.Replace("_","_Saga_")
     let isSaga (name : string) = name.Contains("_Saga_")
 
@@ -109,15 +111,13 @@ module SagaStarter =
         let message = Send(SagaStarterPath, (event, untyped originator, cid) |> toCheckSagas)
         (mediator <? (message )) |> Async.RunSynchronously |> ignore
 
-    let publishEvent (mailbox : Actor<_>) (mediator) replyToSender event=
+    let publishEvent (mailbox : Actor<_>) (mediator) event=
         let sender = mailbox.Sender()
         let self = mailbox.Self
         if sender.Path.Name |> isSaga then
             let originatorName = sender.Path.Name |> toOriginatorName
             if originatorName <> self.Path.Name then
                 mediator <! Publish(originatorName, event )
-        elif replyToSender then
-            sender <! event
         mediator <! Publish(self.Path.Name, event)
 
     let cont (mediator) =
@@ -205,40 +205,58 @@ module SagaStarter =
         typed mediator <! (sagaStarter |> untyped |> Put)
 
 module CommandHandler =
-    type Filter = obj -> bool
-    type CommandData = { Command : obj; Target : IActorRef ; Filter : Filter ; Topic : string}
-    type Command =
-          | Execute of CommandData
-    type State = { Subscribing : Map<string, CommandData>; Subscribed :  Map<string, CommandData>}
 
-    let (|SubscrptionAcknowledged|_|) (msg: obj)  =
+    let (|SubscriptionAcknowledged|_|) (msg: obj)  =
          match msg with
          | :? SubscribeAck as s -> Some s
          | _ -> None
 
-    let actorProp (cmd : obj) (mediator : IActorRef) (mailbox : Actor<_>)=
-          let rec set (state : State)=
-              actor {
-                let! msg = mailbox.Receive()
-                match msg with
-                | Execute commandData ->
-                    monitor mailbox (mailbox.Sender()) |> ignore
-                    let state = { state with Subscribing = state.Subscribing.Add(commandData.Topic, commandData)}
-                    mediator.Tell( Subscribe(commandData.Topic, untyped mailbox.Self))
-                    return! set state
+    type CommandDetails<'Command,'Event> =
+        {      EntityRef : IEntityRef<Message<'Command,'Event>>
+               Cmd : Command<'Command>
+               Filter :( 'Event -> bool)
+        }
+    type State<'Command,'Event> =
+        {   CommandDetails : CommandDetails<'Command,'Event>
+            Sender : IActorRef
+        }
 
-                | SubscrptionAcknowledged s ->
-                    let topic = s.Subscribe.Topic
-                    match state.Subscribing.TryFind topic with
-                    | Some r ->
-                        return! set { state with Subscribing = state.Subscribing.Remove topic ; Subscribed = state.Subscribed.Add(topic,r)}
-                    | _ ->
-                        mediator.Tell(Unsubscribe(topic, untyped mailbox.Self))
-                        return! set state
+    type Command<'Command,'Event> =
+        Execute of CommandDetails<'Command,'Event>
 
-                return set state
-              }
-          set { Subscribing = Map.empty ; Subscribed = Map.empty}
+    let subscribeForCommand<'Command,'Event> system mediator (command :  Command<'Command,'Event>)=
+        let  actorProp mediator (mailbox : Actor<obj>)=
+              let rec set (state : State<'Command,'Event> option)=
+                  actor {
+                      let! msg = mailbox.Receive()
+                      match box msg with
+                      | SubscriptionAcknowledged _ ->
+                          state.Value.CommandDetails.EntityRef <! (state.Value.CommandDetails.Cmd |> Message.Command)
+                          return! set state
+                      | :? Command<'Command,'Event> as s ->
+                          let sender = mailbox.Sender()
+                          let cd =
+                              match s with
+                              |Execute cd ->
+                                  monitor mailbox sender |> ignore
+                                  mediator <! box( Subscribe(cd.EntityRef.EntityId, untyped mailbox.Self))
+                                  cd
+                          return! set (Some {CommandDetails = cd; Sender = untyped sender } )
+                      | :? Event<'Event> as e
+                          when e.CorrelationId = state.Value.CommandDetails.Cmd.CorrelationId
+                              && state.Value.CommandDetails.Filter e.Event ->
+                          state.Value.Sender.Tell e
+                          return! Stop
+                      | Terminated s -> return! Stop
+                      | LifecycleEvent _ ->  return! Ignore
+                      | _ ->
+                          return! Unhandled
+                    }
+              set None
+        async{
+            let! res = spawnAnonymous system (props(actorProp mediator)) <? box command
+            return box res :?> Event<'Event>
+        }
 
 module QuotationHelpers =
 

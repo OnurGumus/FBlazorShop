@@ -34,7 +34,7 @@ module Order =
 
     let actorProp (mediator : IActorRef<Publish>) (mailbox : Eventsourced<_>)=
        let mediatorS = retype mediator
-       let publish  =  SagaStarter.publishEvent mailbox mediator true
+       let publish  =  SagaStarter.publishEvent mailbox mediator
        let sendToSagaStarter =  SagaStarter.toSendMessage mediatorS mailbox.Self
        let rec set (state : Order option * int)=
            actor {
@@ -127,7 +127,7 @@ module Delivery =
 
     let actorProp (mediator : IActorRef<_>) (mailbox : Eventsourced<_>)=
         let mediatorS = retype mediator
-        let publish  =  SagaStarter.publishEvent mailbox mediator true
+        let publish  =  SagaStarter.publishEvent mailbox mediator
         let sendToSagaStarter =  SagaStarter.toSendMessage mediatorS mailbox.Self
         let rec set (state : State * int) =
             actor {
