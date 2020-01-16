@@ -70,5 +70,5 @@ type OrderDetailView() =
 
               | _ -> text "Loading..."
           ]
-let view (model : Model) dispatch = ecomp<OrderDetailView,_,_> model dispatch
+let view (model : Model) dispatch = ecomp<OrderDetailView,_,_> [] model dispatch
 

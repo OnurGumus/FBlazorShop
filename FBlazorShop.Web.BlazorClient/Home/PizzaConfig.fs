@@ -120,4 +120,4 @@ type PizzaConfigView() =
             ]
        | _ -> empty
 
-let view (model : Model) dispatcher = ecomp<PizzaConfigView,_,_> model dispatcher
+let view (model : Model) dispatcher = ecomp<PizzaConfigView,_,_>[] model dispatcher

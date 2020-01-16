@@ -147,4 +147,4 @@ type OrderView() =
 
 
 let view (state : Model) dispatcher =
-    ecomp<OrderView,_,_> state dispatcher
+    ecomp<OrderView,_,_> [] state dispatcher

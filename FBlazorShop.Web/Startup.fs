@@ -10,8 +10,6 @@ open FBlazorShop.EF
 open Bolero.Templating.Server
 open Bolero.Remoting.Server
 open FBlazorShop
-open Blazor
-open Blazor.Extensions
 open Microsoft.AspNetCore.Razor.TagHelpers
 open TagHelperComponents
 
