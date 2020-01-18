@@ -28,6 +28,10 @@ open Microsoft.AspNetCore.Components.Routing
 open Microsoft.JSInterop
 open Elmish
 open Bolero.Render
+open TemplatingInternals
+open Microsoft.Extensions.DependencyInjection
+open Bolero.Templating
+open Bolero.Templating.Client
 
 /// A component built from `Html.Node`s.
 
@@ -168,6 +172,29 @@ let withRouterInfer
     |> withRouter (Router.infer makeMessage getEndPoint)
 
 
+let private registerClient (comp: ProgramComponent<_, _>) =
+       match comp.JSRuntime with
+       | :? IJSInProcessRuntime as runtime ->
+           let settings =
+               let s = comp.Services.GetService<HotReloadSettings>()
+               if obj.ReferenceEquals(s, null) then HotReloadSettings.Default else s
+           let client = new SignalRClient(settings, runtime, comp.NavigationManager)
+           TemplateCache.client <- client
+           client :> IClient
+       | _ ->
+           failwith "To use hot reload on the server side, call AddHotReload() in the ASP.NET Core services"
+
+let withHotReload (program: Elmish.Program<ProgramComponent<'model, 'msg>, 'model, 'msg, Node>) =
+       { program with
+           init = fun comp ->
+               let client =
+                   // In server mode, the IClient service is set by services.AddHotReload().
+                   // In client mode, it is not set, so we create it here.
+                   match comp.Services.GetService<IClient>() with
+                   | null -> registerClient comp
+                   | client -> client
+               client.SetOnChange(comp.Rerender)
+               program.init comp }
 open Bolero.Html
 
 let ecompWithAttr<'T, 'model, 'msg when 'T :> ElmishComponent<'model, 'msg>>

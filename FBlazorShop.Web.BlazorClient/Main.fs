@@ -309,7 +309,7 @@ let program specials update view jsruntime router remote =
                   Log.Error("Error Message: {@Error}" ,x)
                   Log.Error(y,"Exception"))
 
-//          |> Program.withHotReload
+          |> Bolero.F.withHotReload
 #endif
 
 type MyApp()  =
@@ -342,18 +342,10 @@ type MyApp()  =
         } |> Async.StartImmediateAsTask :> System.Threading.Tasks.Task
 
 
-    //override this.OnInitializedAsync() =
-    //    System.Console.WriteLine "OnInitializedAsync"
-    //    base.OnInitializedAsync()
 
-    override this.OnParametersSet() =
-        System.Console.WriteLine this.X
-        base.OnParametersSet()
 
     override this.OnAfterRenderAsync(firstRender) =
-        System.Console.WriteLine "OnAfterRenderAsync"
         let res = base.OnAfterRenderAsync(firstRender) |> Async.AwaitTask
-        System.Console.WriteLine this.X
         async{
 
             do! res
