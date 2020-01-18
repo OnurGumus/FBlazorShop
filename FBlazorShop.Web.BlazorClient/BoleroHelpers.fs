@@ -1,5 +1,173 @@
-﻿module BoleroHelpers
-open Bolero
+﻿// $begin{copyright}
+//
+// This file is part of Bolero
+//
+// Copyright (c) 2018 IntelliFactory and contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License"); you
+// may not use this file except in compliance with the License.  You may
+// obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+// implied.  See the License for the specific language governing
+// permissions and limitations under the License.
+//
+// $end{copyright}
+
+module Bolero.F
+
+open System
+open System.Collections.Generic
+open System.Threading.Tasks
+open Microsoft.AspNetCore.Components
+open Microsoft.AspNetCore.Components.Routing
+open Microsoft.JSInterop
+open Elmish
+open Bolero.Render
+
+/// A component built from `Html.Node`s.
+
+type Program<'model, 'msg> = Program<ProgramComponent<'model, 'msg>, 'model, 'msg, Node>
+
+/// A component that runs an Elmish program.
+and [<AbstractClass>]
+    ProgramComponent<'model, 'msg>() =
+    inherit Component<'model>()
+
+    let mutable oldModel = Unchecked.defaultof<'model>
+    let mutable navigationInterceptionEnabled = false
+    let mutable dispatch = ignore<'msg>
+
+    [<Inject>]
+    member val NavigationManager = Unchecked.defaultof<NavigationManager> with get, set
+    [<Inject>]
+    member val Services = Unchecked.defaultof<System.IServiceProvider> with get, set
+    [<Inject>]
+    member val JSRuntime = Unchecked.defaultof<IJSRuntime> with get, set
+    [<Inject>]
+    member val NavigationInterception = Unchecked.defaultof<INavigationInterception> with get, set
+
+    member val private View = Empty with get, set
+    member _.Dispatch = dispatch
+    member val private Router = None : option<IRouter<'model, 'msg>> with get, set
+
+    /// The Elmish program to run. Either this or AsyncProgram must be overridden.
+    abstract Program : Program<'model, 'msg>
+    default _.Program = Unchecked.defaultof<_>
+
+    /// The Elmish program to run. Either this or Program must be overridden.
+    abstract AsyncProgram : Async<Program<'model, 'msg>>
+    default this.AsyncProgram = async { return this.Program }
+
+    interface IProgramComponent with
+        member this.Services = this.Services
+
+    member private this.OnLocationChanged (_: obj) (e: LocationChangedEventArgs) =
+        this.Router |> Option.iter (fun router ->
+            let uri = this.NavigationManager.ToBaseRelativePath(e.Location)
+            let route = router.SetRoute uri
+            Option.iter dispatch route)
+
+    member internal this.GetCurrentUri() =
+        let uri = this.NavigationManager.Uri
+        this.NavigationManager.ToBaseRelativePath(uri)
+
+    member internal this.SetState(program, model, dispatch) =
+        if this.ShouldRender(oldModel, model) then
+            this.ForceSetState(program, model, dispatch)
+
+    member internal _.StateHasChanged() =
+        base.StateHasChanged()
+
+    member private this.ForceSetState(program, model, dispatch) =
+        this.View <- program.view model dispatch
+        oldModel <- model
+        if navigationInterceptionEnabled then
+            this.InvokeAsync(this.StateHasChanged) |> ignore
+        this.Router |> Option.iter (fun router ->
+            let newUri = router.GetRoute model
+            let oldUri = this.GetCurrentUri()
+            if newUri <> oldUri then
+                try this.NavigationManager.NavigateTo(newUri)
+                with _ -> () // fails if run in prerender
+        )
+
+    member this.Rerender() =
+        this.ForceSetState(this.Program, oldModel, dispatch)
+
+    member internal _._OnInitialized() =
+        base.OnInitialized()
+
+    override this.OnInitialized() =
+            this._OnInitialized()
+            let program = this.Program
+            let setDispatch d =
+                dispatch <- d
+            { program with
+                setState = fun model dispatch ->
+                    this.SetState(program, model, dispatch)
+                init = fun arg ->
+                    let model, cmd = program.init arg
+                    model, setDispatch :: cmd
+            }
+            |> Program.runWith this
+
+    member internal this.InitRouter
+        (
+            r: IRouter<'model, 'msg>,
+            program: Program<'model, 'msg>,
+            initModel: 'model
+        ) =
+        this.Router <- Some r
+        EventHandler<_> this.OnLocationChanged
+        |> this.NavigationManager.LocationChanged.AddHandler
+        match r.SetRoute (this.GetCurrentUri()) with
+        | Some msg ->
+            program.update msg initModel
+        | None ->
+            initModel, []
+
+    override this.OnAfterRenderAsync(firstTime) =
+
+        if firstTime && this.Router.IsSome && not navigationInterceptionEnabled then
+            navigationInterceptionEnabled <- true
+            this.NavigationInterception.EnableNavigationInterceptionAsync()
+        else
+            Task.CompletedTask
+
+
+    override this.Render() =
+        this.View
+
+    interface System.IDisposable with
+        member this.Dispose() =
+            EventHandler<_> this.OnLocationChanged
+            |> this.NavigationManager.LocationChanged.RemoveHandler
+
+// Attach `router` to `program` when it is run as the `Program` of a `ProgramComponent`.
+let withRouter
+        (router: IRouter<'model, 'msg>)
+        (program: Program<'model, 'msg>) =
+    { program with
+        init = fun comp ->
+            let model, initCmd = program.init comp
+            let model, compCmd = comp.InitRouter(router, program, model)
+            model, initCmd @ compCmd }
+
+/// Attach a router inferred from `makeMessage` and `getEndPoint` to `program`
+/// when it is run as the `Program` of a `ProgramComponent`.
+let withRouterInfer
+        (makeMessage: 'ep -> 'msg)
+        (getEndPoint: 'model -> 'ep)
+        (program: Program<'model, 'msg>) =
+    program
+    |> withRouter (Router.infer makeMessage getEndPoint)
+
+
 open Bolero.Html
 
 let ecompWithAttr<'T, 'model, 'msg when 'T :> ElmishComponent<'model, 'msg>>

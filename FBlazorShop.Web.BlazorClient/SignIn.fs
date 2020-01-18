@@ -96,11 +96,11 @@ let view (model : Model) (dispatch : _ -> unit) =
     | true ->
         let login = model.CurrentLogin
         let focused = (fun name -> Action<_>(fun _ -> dispatch (Focused name)))
-        let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedLogin model.Focus focused
+        let formFieldItem = Bolero.F.formFieldItem model.ValidatedLogin model.Focus focused
         let pd name = Action<string> (fun v -> dispatch (SetFormField(name,v )))
         let formItems =
             concat [
-                comp<BoleroHelpers.KeySubscriber> [] []
+                comp<Bolero.F.KeySubscriber> [] []
                 formFieldItem "text" (nameof login.Email) (login.Email, pd (nameof login.Email))
                 formFieldItem "password" (nameof login.Password) (login.Password, pd (nameof login.Password))
             ]

@@ -103,7 +103,7 @@ type PizzaConfigView() =
            let toppings = viewToppings pizza (model.Toppings) dispatcher
            let toppingItems = viewToppingItems pizza.Toppings dispatcher
            concat [
-            comp<BoleroHelpers.KeySubscriber> [] []
+            comp<Bolero.F.KeySubscriber> [] []
             PizzaConfig()
                .ToppingItems(toppingItems)
                .ToppingCombo(toppings)

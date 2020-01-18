@@ -126,7 +126,7 @@ let view (model : Model) dispatch =
             let pd f = Action<_> (fun n -> n |> f |> dispatch)
             let focused = (fun name -> Action<_>(fun _ -> dispatch (Focused name)))
             let address = model.CurrentAddress
-            let formFieldItem = BoleroHelpers.formFieldItem model.ValidatedAddress model.Focus focused  "text"
+            let formFieldItem = Bolero.F.formFieldItem model.ValidatedAddress model.Focus focused  "text"
             let formItems =
                 concat [
                     formFieldItem (nameof address.Name) (address.Name, pd SetAddressName)

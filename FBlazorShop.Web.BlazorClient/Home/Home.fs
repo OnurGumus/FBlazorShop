@@ -18,23 +18,29 @@ type Message =
     | OrderMsg of OrderMsg
     | CheckoutRequested of Order
 
+let mutable loaded = false
 
 open Elmish
 
-let init (remote: PizzaService) jsRuntime =
+let init (remote: PizzaService)  specials jsRuntime =
     let pizzaConfigModel, pizzaConfigCmd = PizzaConfig.init remote ()
     let orderModel, orderCmd = Orders.init jsRuntime
     let pizzaConfigCmd = Cmd.map PizzaConfigMsg pizzaConfigCmd
-    let cmd = Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
+    let cmd =
+        match specials with
+        | [] ->Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
+        | _ -> Cmd.none
     let cmd = Cmd.batch [ cmd; pizzaConfigCmd; Cmd.map OrderMsg orderCmd  ]
-    { specials = []
+    { specials = specials
       PizzaConfig = pizzaConfigModel
       Order = orderModel }, cmd
 
 let update remote jsRuntime message model =
     match message with
     | OrderMsg (OrderMsg.CheckoutRequested o) -> model, Cmd.ofMsg(CheckoutRequested o)
-    | SpecialsReceived d -> { model with specials = d }, Cmd.none
+    | SpecialsReceived d ->
+       // loaded <- true
+        { model with specials = d }, Cmd.none
     | PizzaConfigMsg(ConfigDone p) ->
         model,
         Cmd.ofMsg
@@ -51,7 +57,7 @@ let update remote jsRuntime message model =
     | CheckoutRequested _ -> failwith "should be intercepted"
 
 open Bolero
-open BoleroHelpers
+open Bolero.F
 
 type PizzaCards = Template<"wwwroot\PizzaCards.html">
 

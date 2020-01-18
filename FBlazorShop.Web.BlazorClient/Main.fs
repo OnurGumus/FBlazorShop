@@ -11,7 +11,6 @@ open Newtonsoft.Json
 open FBlazorShop.App.Model
 open System
 open Serilog
-
 type Page =
     | Start
     | [<EndPoint "/">] Home of Model : PageModel<Home.Model>
@@ -48,7 +47,7 @@ and Message=
 
 let defaultPageModel remote jsRuntime = function
 | MyOrders m -> Router.definePageModel m (MyOrders.init remote|> fst)
-| Home m ->Router.definePageModel m (Home.init remote jsRuntime|> fst)
+| Home m ->Router.definePageModel m (Home.init remote [] jsRuntime|> fst)
 | OrderDetail (key,v, m) -> Router.definePageModel m (OrderDetail.init  ((if isNull key then ("",0) else (key,v) ) )|> fst)
 | Checkout m -> Router.definePageModel m (Checkout.init remote None|> fst)
 | Start -> ()
@@ -70,7 +69,7 @@ let initCheckout remote model order =
     initPage   (Checkout.init remote order) model CheckoutMsg Checkout
 
 let initHome remote jsrunTime model =
-    initPage (Home.init remote jsrunTime) model HomeMsg Home
+    initPage (Home.init remote model.Specials jsrunTime) model HomeMsg Home
 
 
 let init specials =
@@ -125,6 +124,10 @@ let signOut (jsRuntime : IJSRuntime)  =
                 jsRuntime.InvokeVoidAsync("window.localStorage.removeItem", "token")
                     .AsTask()
                     |> Async.AwaitTask
+            do!
+                jsRuntime.InvokeVoidAsync("eraseCookie", "token")
+                             .AsTask()
+                             |> Async.AwaitTask
             return SignedOut
         }
     Cmd.ofAsync doWork () id raise
@@ -135,6 +138,10 @@ let signInCmd (jsRuntime : IJSRuntime) (token : Common.Authentication)  =
             let ser = JsonConvert.SerializeObject(token)
             do!
                 jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "token" , ser)
+                    .AsTask()
+                    |> Async.AwaitTask
+            do!
+                jsRuntime.InvokeVoidAsync("setCookie", "token" , System.Net.WebUtility.UrlEncode(ser) , 7)
                     .AsTask()
                     |> Async.AwaitTask
             return TokenSaved token
@@ -157,7 +164,8 @@ let update remote jsRuntime message model =
 
     match message, model.Page with
     | RemoveBuffer, _ -> { model with BufferedCommand = Cmd.none}, Cmd.none
-    | Rendered, _ -> model, getToken jsRuntime
+    | Rendered, _ ->
+        model, getToken jsRuntime
     | SetPage(Checkout _), Start
     | SetPage(Start), _
     | SetPage(Home _), _ -> initHome remote jsRuntime model
@@ -233,7 +241,7 @@ let update remote jsRuntime message model =
     | msg, model -> invalidOp   (msg.ToString() + " === " + model.ToString())
 
 open Bolero.Html
-open BoleroHelpers
+
 
 type MainLayout = Template<"wwwroot\MainLayout.html">
 
@@ -247,7 +255,7 @@ type LoginDisplay() =
                         [text "Sign in"]
                 | Common.AuthState.Success {User = user} ->
                     concat [
-                        img [attr.src ("img/user.svg" |> prependContent)]
+                        img [attr.src ("img/user.svg" |> Bolero.F.prependContent)]
                         div [] [
                             span [attr.``class`` "username"] [text user]
                             a [attr.``class`` "sign-out"; on.click (fun _ -> SignOutRequested |> dispatch)][text "Sign out"]
@@ -272,13 +280,13 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         .GetPizzaLink(navLink NavLinkMatch.All
             [attr.href "/"; attr.``class`` "nav-tab"]
             [
-                img [attr.src ("img/pizza-slice.svg" |> prependContent)]
+                img [attr.src ("img/pizza-slice.svg" |> Bolero.F.prependContent)]
                 div [] [text "Get Pizza"]
             ])
         .MyOrders(navLink NavLinkMatch.All
             [attr.href "myOrders"; attr.``class`` "nav-tab"]
             [
-                img [attr.src ("img/bike.svg" |> prependContent)]
+                img [attr.src ("img/bike.svg" |>Bolero.F.prependContent)]
                 div [] [text "My Orders"]
             ])
         .Body(content)
@@ -290,9 +298,22 @@ open System
 open Bolero.Templating.Client
 
 open Microsoft.AspNetCore.Components
+let program specials update view jsruntime router remote =
+    Program.mkProgram (fun _ -> init (specials |> List.ofArray)) (update) (view jsruntime)
+          |> Bolero.F.withRouter router
+#if DEBUG
+          //|> Program.withTrace(fun msg model -> Log.Debug("{@MSG}",msg))
+      //   |> Program.withConsoleTrace
+          |> Program.withErrorHandler
+              (fun (x,y) ->
+                  Log.Error("Error Message: {@Error}" ,x)
+                  Log.Error(y,"Exception"))
 
-type MyApp() =
-    inherit ProgramComponent<Model, Message>()
+//          |> Program.withHotReload
+#endif
+
+type MyApp()  =
+    inherit Bolero.F.ProgramComponent<Model, Message>()
 
     static member  val Dispatchers :  System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit), unit>
         = new System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit),unit>() with get, set
@@ -300,42 +321,55 @@ type MyApp() =
           member this.Dispose() =
             MyApp.Dispatchers.TryRemove(this.Dispatch) |> ignore
 
+   // [<Parameter>]
+    member val Specials : PizzaSpecial array =  Array.empty with get, set
     [<Parameter>]
-    member val Specials : PizzaSpecial list = [] with get, set
+    member val X : int =  0 with get, set
 
     [<JSInvokable>]
     static member  ReturnArrayAsync(message: obj) =
         Console.WriteLine(message)
         System.Threading.Tasks.Task.FromResult([| 1; 2; 3 |]);
 
+    member internal this._SetParametersAsync(v) =
+           base.SetParametersAsync(v)
+
+    override this.SetParametersAsync(v) =
+        async {
+            let! s =  this.Remote<PizzaService>().getSpecials()
+            this.Specials <- s |> List.toArray
+            do! (this._SetParametersAsync(v)  |> Async.AwaitTask)
+        } |> Async.StartImmediateAsTask :> System.Threading.Tasks.Task
+
+
+    //override this.OnInitializedAsync() =
+    //    System.Console.WriteLine "OnInitializedAsync"
+    //    base.OnInitializedAsync()
+
+    override this.OnParametersSet() =
+        System.Console.WriteLine this.X
+        base.OnParametersSet()
 
     override this.OnAfterRenderAsync(firstRender) =
+        System.Console.WriteLine "OnAfterRenderAsync"
         let res = base.OnAfterRenderAsync(firstRender) |> Async.AwaitTask
+        System.Console.WriteLine this.X
         async{
+
             do! res
             if firstRender then
-                MyApp.Dispatchers.TryAdd(this.Dispatch,()) |> ignore
-                this.Dispatch Rendered
+               MyApp.Dispatchers.TryAdd(this.Dispatch,()) |> ignore
+               this.Dispatch Rendered
             return ()
          }|> Async.StartImmediateAsTask :> _
 
     override this.Program =
-        let remote = this.Remote<PizzaService>()
-        let update = update remote (this.JSRuntime)
-        let router = router remote (this.JSRuntime)
-        Program.mkProgram (fun _ -> init this.Specials) (update) (view this.JSRuntime)
-        |> Program.withRouter router
-    //    |> Program.withSubscription (fun _ -> Rendered |> Cmd.ofMsg)
-#if DEBUG
-        |> Program.withTrace(fun msg model -> Log.Debug("{@MSG}",msg))
-        |> Program.withConsoleTrace
-        |> Program.withErrorHandler
-            (fun (x,y) ->
-                Log.Error("Error Message: {@Error}" ,x)
-                Log.Error(y,"Exception"))
+       let remote = this.Remote<PizzaService>()
+       let update = update remote (this.JSRuntime)
+       let router = router remote (this.JSRuntime)
 
-        |> Program.withHotReload
-#endif
+       program (this.Specials) update  view this.JSRuntime router remote
+
 
 open Microsoft.AspNetCore.Components.Builder
 open Microsoft.Extensions.DependencyInjection
