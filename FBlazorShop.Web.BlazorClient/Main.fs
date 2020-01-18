@@ -107,23 +107,22 @@ let getToken (jsRuntime : IJSRuntime)  =
     let doWork () =
         async{
             let! res =
-                jsRuntime.InvokeAsync<string>("window.localStorage.getItem", "token")
+                jsRuntime.InvokeAsync<string>("getCookie", "token")
                     .AsTask()
                     |> Async.AwaitTask
             return
                 match res with
                 | null -> TokenNotFound
-                | t -> t |> JsonConvert.DeserializeObject<Common.Authentication> |> TokenRead
+                | t ->
+                    t
+                    |> System.Net.WebUtility.UrlDecode
+                    |> JsonConvert.DeserializeObject<Common.Authentication> |> TokenRead
         }
     Cmd.ofAsync doWork () id (fun _ -> TokenNotFound)
 
 let signOut (jsRuntime : IJSRuntime)  =
     let doWork () =
         async{
-            do!
-                jsRuntime.InvokeVoidAsync("window.localStorage.removeItem", "token")
-                    .AsTask()
-                    |> Async.AwaitTask
             do!
                 jsRuntime.InvokeVoidAsync("eraseCookie", "token")
                              .AsTask()
@@ -136,10 +135,6 @@ let signInCmd (jsRuntime : IJSRuntime) (token : Common.Authentication)  =
     let doWork () =
         async{
             let ser = JsonConvert.SerializeObject(token)
-            do!
-                jsRuntime.InvokeVoidAsync("window.localStorage.setItem", "token" , ser)
-                    .AsTask()
-                    |> Async.AwaitTask
             do!
                 jsRuntime.InvokeVoidAsync("setCookie", "token" , System.Net.WebUtility.UrlEncode(ser) , 7)
                     .AsTask()

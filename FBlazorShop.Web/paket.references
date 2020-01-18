@@ -16,3 +16,4 @@ Serilog.Sinks.ApplicationInsights
 Serilog.Sinks.File
 Serilog.Sinks.Console
 Destructurama.FSharp
+Microsoft.AspNetCore.Components
