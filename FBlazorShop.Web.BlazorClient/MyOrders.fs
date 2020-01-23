@@ -47,6 +47,7 @@ let view (model : Model) dispatch =
                             .OrderOrderId(s.Order.OrderId.ToString())
                             .OrderPizzasCount(s.Order.Pizzas.Length.ToString())
                             .StatusText(s.StatusText)
+                            .Version(s.Order.Version.ToString())
                             .Elt()
                     OrderList().Items(forEach orders viewOrder).Elt()
         ]

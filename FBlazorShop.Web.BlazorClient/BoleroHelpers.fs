@@ -45,6 +45,7 @@ and [<AbstractClass>]
     let mutable oldModel = Unchecked.defaultof<'model>
     let mutable navigationInterceptionEnabled = false
     let mutable dispatch = ignore<'msg>
+    let mutable rendered = false
 
     [<Inject>]
     member val NavigationManager = Unchecked.defaultof<NavigationManager> with get, set
@@ -63,9 +64,6 @@ and [<AbstractClass>]
     abstract Program : Program<'model, 'msg>
     default _.Program = Unchecked.defaultof<_>
 
-    /// The Elmish program to run. Either this or Program must be overridden.
-    abstract AsyncProgram : Async<Program<'model, 'msg>>
-    default this.AsyncProgram = async { return this.Program }
 
     interface IProgramComponent with
         member this.Services = this.Services
@@ -90,7 +88,7 @@ and [<AbstractClass>]
     member private this.ForceSetState(program, model, dispatch) =
         this.View <- program.view model dispatch
         oldModel <- model
-        if navigationInterceptionEnabled then
+        if rendered then
             this.InvokeAsync(this.StateHasChanged) |> ignore
         this.Router |> Option.iter (fun router ->
             let newUri = router.GetRoute model
@@ -136,8 +134,9 @@ and [<AbstractClass>]
             initModel, []
 
     override this.OnAfterRenderAsync(firstTime) =
+        if firstTime then rendered <- true
 
-        if firstTime && this.Router.IsSome && not navigationInterceptionEnabled then
+        if this.Router.IsSome && not navigationInterceptionEnabled then
             navigationInterceptionEnabled <- true
             this.NavigationInterception.EnableNavigationInterceptionAsync()
         else
