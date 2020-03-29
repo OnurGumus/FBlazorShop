@@ -238,7 +238,7 @@ let update remote jsRuntime message model =
 open Bolero.Html
 
 
-type MainLayout = Template<"wwwroot\MainLayout.html">
+type MainLayout = Template<"wwwroot/MainLayout.html">
 
 type LoginDisplay() =
     inherit ElmishComponent<Common.AuthState, Message>()

@@ -53,7 +53,7 @@ open FBlazorShop.ComponentsLibrary
 let map  markers =
         comp<Map> ["Zoom" => 13.0; "Markers" => markers ] []
 
-type OrderDetail = Template<"wwwroot\OrderDetail.html">
+type OrderDetail = Template<"wwwroot/OrderDetail.html">
 
 
 type OrderDetailView() =

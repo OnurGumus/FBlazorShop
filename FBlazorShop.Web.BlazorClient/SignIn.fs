@@ -2,7 +2,7 @@
 open Bolero
 open Elmish
 
-type SignIn = Template<"wwwroot\SignIn.html">
+type SignIn = Template<"wwwroot/SignIn.html">
 type Login = { Email : string; Password : string}
 type Model = {
     FailureReason : string option

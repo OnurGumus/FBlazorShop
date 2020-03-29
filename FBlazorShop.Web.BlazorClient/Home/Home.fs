@@ -59,7 +59,7 @@ let update remote jsRuntime message model =
 open Bolero
 open Bolero.F
 
-type PizzaCards = Template<"wwwroot\PizzaCards.html">
+type PizzaCards = Template<"wwwroot/PizzaCards.html">
 
 type ViewItem() =
     inherit ElmishComponent<PizzaSpecial, Message>()

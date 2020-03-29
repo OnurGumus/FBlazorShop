@@ -27,7 +27,7 @@ let update (remote :PizzaService) message (model , commonState: Common.State) =
 
 
 open Bolero.Html
-type OrderList = Template<"wwwroot\MyOrders.html">
+type OrderList = Template<"wwwroot/MyOrders.html">
 
 let view (model : Model) dispatch =
     concat [

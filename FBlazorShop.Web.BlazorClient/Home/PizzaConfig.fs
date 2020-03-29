@@ -77,7 +77,7 @@ let viewToppings (pizza : Pizza) (toppings : Topping list) dispatcher =
             ]
     ]
 
-type PizzaConfig = Template<"wwwroot\ConfigurePizza.html">
+type PizzaConfig = Template<"wwwroot/ConfigurePizza.html">
 open System.Collections.Generic
 
 let viewToppingItems (toppings : IReadOnlyList<PizzaTopping> ) dispatcher =

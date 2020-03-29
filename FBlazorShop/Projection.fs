@@ -1,4 +1,4 @@
-﻿module Projection
+module Projection
 
 open Akka.Persistence.Query
 open Newtonsoft.Json
@@ -17,11 +17,11 @@ open Akka.Persistence.Query.Sql
 
 
 [<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"\.."
+let resolutionPath = __SOURCE_DIRECTORY__ + @"/.."
 
 [<Literal>]
 let connectionString =
-    @"Data Source=" + __SOURCE_DIRECTORY__ + @"\..\FBlazorShop.Web\pizza.db;"
+    @"Data Source=" + __SOURCE_DIRECTORY__ + @"/../FBlazorShop.Web/pizza.db;"
 
 type Sql =
     SqlDataProvider<

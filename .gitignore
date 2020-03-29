@@ -302,3 +302,4 @@ Application/SmartKiosk/DeskoLibs)/
 *.db-wal
 *.db-shm
 *.txt
+.paket/

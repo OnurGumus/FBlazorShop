@@ -117,7 +117,7 @@ let update remote message (model : Model, commonState : Common.State) =
 open Bolero.Html
 open System
 
-type Checkout = Template<"wwwroot\Checkout.html">
+type Checkout = Template<"wwwroot/Checkout.html">
 
 let view (model : Model) dispatch =
     div [ attr.``class`` "main"][

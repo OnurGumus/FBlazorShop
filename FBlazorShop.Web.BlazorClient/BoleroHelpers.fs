@@ -212,7 +212,7 @@ let errorAndClass name onFocus (result:Result<_,Map<_,_>> option) =
       | Some _, _ -> "", "modified valid"
       | _ -> "",""
 
-type FormField = Template<"wwwroot\FormField.html">
+type FormField = Template<"wwwroot/FormField.html">
 let formFieldItem  item onFocus focusMessage fieldType name value =
       let error, validClass = errorAndClass name onFocus item
       FormField()
