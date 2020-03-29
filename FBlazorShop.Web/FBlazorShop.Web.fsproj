@@ -51,6 +51,7 @@
     <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="pizza.db" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest"/>
     <Folder Include="wwwroot\_content\FBlazorShop.Web.BlazorClient\" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
