@@ -15,9 +15,12 @@ open Serilog
 open Akka.Persistence.Sqlite
 open Akka.Persistence.Query.Sql
 
-
 [<Literal>]
-let resolutionPath = __SOURCE_DIRECTORY__ + @"/.."
+#if _WINDOWS
+let resolutionPath = __SOURCE_DIRECTORY__ + @"/../sqlite_windows"
+#else
+let resolutionPath = __SOURCE_DIRECTORY__ + @"/../sqlite_linux"
+#endif
 
 [<Literal>]
 let connectionString =
