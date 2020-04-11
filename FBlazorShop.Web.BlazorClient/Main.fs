@@ -289,26 +289,26 @@ let view  (js: IJSRuntime) ( model : Model) dispatch =
         .SignIn(signIn)
         .Elt()
 
-open System
 open Bolero.Templating.Client
 
 open Microsoft.AspNetCore.Components
+
 let program specials update view jsruntime router remote =
     Program.mkProgram (fun _ -> init (specials |> List.ofArray)) (update) (view jsruntime)
-          |> Bolero.F.withRouter router
+        |> Program.withRouter router
 #if DEBUG
-          //|> Program.withTrace(fun msg model -> Log.Debug("{@MSG}",msg))
-      //   |> Program.withConsoleTrace
-          |> Program.withErrorHandler
-              (fun (x,y) ->
-                  Log.Error("Error Message: {@Error}" ,x)
-                  Log.Error(y,"Exception"))
+        // |> Program.withTrace(fun msg model -> Log.Debug("{@MSG}",msg))
+        // |> Program.withConsoleTrace
+        // |> Program.withErrorHandler
+        //       (fun (x,y) ->
+        //           Log.Error("Error Message: {@Error}" ,x)
+        //           Log.Error(y,"Exception"))
 
-          |> Bolero.F.withHotReload
+        // |> Program.withHotReload
 #endif
 
 type MyApp()  =
-    inherit Bolero.F.ProgramComponent<Model, Message>()
+    inherit Bolero.ProgramComponent<Model, Message>()
 
     static member  val Dispatchers :  System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit), unit>
         = new System.Collections.Concurrent.ConcurrentDictionary<(Message -> unit),unit>() with get, set
@@ -337,8 +337,6 @@ type MyApp()  =
         } |> Async.StartImmediateAsTask :> System.Threading.Tasks.Task
 
 
-
-
     override this.OnAfterRenderAsync(firstRender) =
         let res = base.OnAfterRenderAsync(firstRender) |> Async.AwaitTask
         async{
@@ -358,12 +356,11 @@ type MyApp()  =
        program (this.Specials) update  view this.JSRuntime router remote
 
 
-open Microsoft.AspNetCore.Components.Builder
-open Microsoft.Extensions.DependencyInjection
-open Bolero.Remoting.Client
-type Startup() =
-    member __.ConfigureServices(services: IServiceCollection) =
-        services.AddRemoting()
+// open Microsoft.Extensions.DependencyInjection
+// open Bolero.Remoting.Client
+// type Startup() =
+//     member __.ConfigureServices(services: IServiceCollection) =
+//         services.AddRemoting()
 
-    member __.Configure(app: IComponentsApplicationBuilder) =
-        app.AddComponent<MyApp>("app")
+//     member __.Configure(app: IComponentsApplicationBuilder) =
+//         app.AddComponent<MyApp>("app")

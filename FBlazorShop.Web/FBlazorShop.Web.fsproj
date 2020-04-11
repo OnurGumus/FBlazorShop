@@ -13,10 +13,10 @@
     <Platform Condition="'$(Configuration)'==''">Debug</Platform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>WASM</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <DefineConstants>
+    <DefineConstants>WASM
     </DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -26,7 +26,7 @@
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-    <DefineConstants></DefineConstants>
+    <DefineConstants>WASM</DefineConstants>
     <PlatformTarget>x86</PlatformTarget>
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
@@ -51,7 +51,7 @@
     <ProjectReference Include="..\FBlazorShop\FBlazorShop.fsproj" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="pizza.db" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest"/>
+    <None Include="pizza.db" CopyToPublishDirectory="PreserveNewest" CopyToOutputDirectory="PreserveNewest" />
     <Folder Include="wwwroot\_content\FBlazorShop.Web.BlazorClient\" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

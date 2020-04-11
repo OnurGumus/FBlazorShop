@@ -8,8 +8,7 @@ Akkling.Persistence
 Akkling.Cluster.Sharding
 Akka.Persistence.Query.Sql
 SQLProvider
-SQLitePCLRaw.core
-System.Data.SQLite.Core
+Microsoft.Data.SQLite.Core
 Akka.Cluster.Tools
 Serilog
 NodaTime

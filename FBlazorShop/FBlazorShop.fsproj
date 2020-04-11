@@ -5,8 +5,8 @@
     <Platforms>AnyCPU</Platforms>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(OS)' == 'Windows_NT' ">
-    <DefineConstants>_WINDOWS</DefineConstants>
+  <PropertyGroup Condition=" '$(BuildingInsideVisualStudio)' == 'true' ">
+    <DefineConstants>_VS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AkklingHelpers.fs" />

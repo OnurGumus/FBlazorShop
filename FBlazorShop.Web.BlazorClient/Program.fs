@@ -1,12 +1,14 @@
 ﻿module Program
 
-open Microsoft.AspNetCore.Blazor.Hosting
 open FBlazorShop.Web.BlazorClient
+open Microsoft.AspNetCore.Components.WebAssembly.Hosting
+open Bolero.Remoting.Client
+module Program =
 
-[<EntryPoint>]
-let Main args =
-    BlazorWebAssemblyHost.CreateDefaultBuilder()
-        .UseBlazorStartup<Main.Startup>()
-        .Build()
-        .Run()
-    0
+    [<EntryPoint>]
+    let Main args =
+        let builder = WebAssemblyHostBuilder.CreateDefault(args)
+        builder.RootComponents.Add<Main.MyApp>("app")
+        builder.Services.AddRemoting() |> ignore
+        builder.Build().RunAsync() |> ignore
+        0

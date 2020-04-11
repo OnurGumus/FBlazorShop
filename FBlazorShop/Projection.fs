@@ -15,12 +15,16 @@ open Serilog
 open Akka.Persistence.Sqlite
 open Akka.Persistence.Query.Sql
 
+
 [<Literal>]
-#if _WINDOWS
-let resolutionPath = __SOURCE_DIRECTORY__ + @"/../sqlite_windows"
-#else
-let resolutionPath = __SOURCE_DIRECTORY__ + @"/../sqlite_linux"
+#if _VS
+let arc = @"x86/"
+#else 
+let arc = @"x64/"
 #endif
+
+[<Literal>]
+let resolutionPath = __SOURCE_DIRECTORY__ + @"/../sqlite_" + arc
 
 [<Literal>]
 let connectionString =
@@ -29,7 +33,7 @@ let connectionString =
 type Sql =
     SqlDataProvider<
             Common.DatabaseProviderTypes.SQLITE,
-            SQLiteLibrary = Common.SQLiteLibrary.SystemDataSQLite,
+            SQLiteLibrary = Common.SQLiteLibrary.MicrosoftDataSqlite,
             ConnectionString = connectionString,
             ResolutionPath = resolutionPath,
             CaseSensitivityChange = Common.CaseSensitivityChange.ORIGINAL>

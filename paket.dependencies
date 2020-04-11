@@ -1,39 +1,43 @@
 source https://api.nuget.org/v3/index.json
 storage:none
 framework:auto-detect
-nuget FSharp.Core
+
+nuget FSharp.Core >= 4.7.1
 nuget System.Collections.Immutable
-nuget Microsoft.EntityFrameworkCore prerelease
+nuget Microsoft.EntityFrameworkCore 
 nuget System.Threading.Tasks
 nuget TaskBuilder.fs
-nuget Microsoft.EntityFrameworkCore.Sqlite prerelease
-nuget Bolero 0.11.18-preview31
-nuget Bolero.Server 0.11.18-preview31
-nuget Bolero.HotReload.Server 0.11.4-preview31
-nuget Bolero.HotReload 0.11.4-preview31
-nuget Bolero.Build 0.11.18-preview31
-nuget Microsoft.AspNetCore.Blazor  = 3.1.0-preview4.19579.2
-nuget Microsoft.AspNetCore.Blazor.Server = 3.1.0-preview4.19579.2
-nuget Microsoft.AspNetCore.Blazor.Build = 3.1.0-preview4.19579.2
-nuget Microsoft.AspNetCore.Blazor.DevServer = 3.1.0-preview4.19579.2
-nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
+nuget Microsoft.EntityFrameworkCore.Sqlite
+
+nuget Bolero 0.12.12-preview32
+nuget Bolero.Server 0.12.12-preview32
+nuget Bolero.HotReload.Server 0.12.5-preview32
+nuget Bolero.HotReload 0.12.5-preview32
+nuget Bolero.Build 0.12.12-preview32
+
+nuget Microsoft.AspNetCore.Components.WebAssembly.Build  3.2.0-preview2.20160.5
+nuget Microsoft.AspNetCore.Components.WebAssembly.DevServer 3.2.0-preview2.20160.5
+nuget Microsoft.AspNetCore.Components.WebAssembly.Server 3.2.0-preview2.20160.5
+nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation 3.1
+nuget Microsoft.AspNetCore.Components 
+
 nuget JWT
 nuget Newtonsoft.Json
-nuget Akka.Cluster.Sharding prerelease
 nuget Dynamic.ConfigSection
-nuget Akkling prerelease
-nuget Akka.Persistence.Sqlite prerelease
-nuget Akkling.Persistence prerelease
-nuget Akkling.Cluster.Sharding prerelease
-nuget Akka.Persistence.Query.Sql prerelease
-nuget Akka.Cluster.Tools prerelease
-nuget SQLProvider
-nuget SQLitePCLRaw.core
-nuget System.Data.SQLite.Core
+
+nuget Akkling 
+nuget Akka.Persistence.Sqlite 
+nuget Akkling.Persistence
+nuget Akka.Cluster.Sharding 
+nuget Akkling.Cluster.Sharding 
+nuget Akka.Persistence.Query.Sql 
+nuget Akka.Cluster.Tools
+
+nuget SQLProvider 1.1.76
+nuget Microsoft.Data.Sqlite.Core 3.1.3
 nuget Serilog.Sinks.ApplicationInsights
 nuget Serilog.Sinks.File
 nuget Serilog.Sinks.Console
 nuget Destructurama.FSharp >= 1.1.1-dev-00033
 nuget NodaTime
 nuget NodaTime.Serialization.JsonNet
-nuget Microsoft.AspNetCore.Components >= 3.1.1

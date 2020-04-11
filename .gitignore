@@ -303,3 +303,6 @@ Application/SmartKiosk/DeskoLibs)/
 *.db-shm
 *.txt
 .paket/
+
+.fake
+.ionide

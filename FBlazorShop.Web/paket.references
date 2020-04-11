@@ -4,14 +4,13 @@ Microsoft.EntityFrameworkCore.Sqlite
 Bolero
 Bolero.Server
 Bolero.HotReload.Server
-Microsoft.AspNetCore.Blazor
-Microsoft.AspNetCore.Blazor.Server
+Microsoft.AspNetCore.Components.WebAssembly.Server
 Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation
 JWT
 Akka.Cluster.Sharding
 Akkling
 Akka.Persistence.Sqlite
-System.Data.SQLite.Core
+Microsoft.Data.SQLite.Core
 Serilog.Sinks.ApplicationInsights
 Serilog.Sinks.File
 Serilog.Sinks.Console
