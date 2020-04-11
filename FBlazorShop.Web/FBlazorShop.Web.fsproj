@@ -16,8 +16,7 @@
     <DefineConstants>WASM</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <DefineConstants>WASM
-    </DefineConstants>
+    <DefineConstants> </DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DefineConstants></DefineConstants>

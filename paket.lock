@@ -399,6 +399,7 @@ NUGET
     SQLitePCLRaw.core (2.0.2)
       System.Memory (>= 4.5.3)
     SQLitePCLRaw.lib.e_sqlite3 (2.0.2)
+    SQLitePCLRaw.lib.e_sqlite3.linux (1.1.14)
     SQLitePCLRaw.provider.dynamic_cdecl (2.0.2) - restriction: || (== netcoreapp3.1) (&& (== netstandard2.1) (>= net461)) (&& (== netstandard2.1) (>= netcoreapp3.0))
       SQLitePCLRaw.core (>= 2.0.2)
     SQLitePCLRaw.provider.e_sqlite3 (2.0.2) - restriction: || (&& (== netcoreapp3.1) (>= monoandroid8.0)) (&& (== netcoreapp3.1) (< netcoreapp3.0)) (== netstandard2.1)
