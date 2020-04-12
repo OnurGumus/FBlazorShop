@@ -7,7 +7,7 @@ by using F# and Bolero. It also shows an example on How to do CQRS with Event So
 
 ![ScreenShot](FBlazor.png)
 ## Build & Run instructions:
-- Bulding requires .NET Core 3.1.201 SDK
+- Building requires .NET Core 3.1.201 SDK
 - For Linux you also need Mono 6.x while building
 - Clone the repository (if you choose to download zip, you may need to unblock .config/dotnet-tools.json on windows platform)
 - Windows users can just run **run-server-64-bit.cmd** or **run-wasm-64-bit.cmd** depending on which version they want to run.
