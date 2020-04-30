@@ -1,4 +1,4 @@
-FROM docker pull mcr.microsoft.com/dotnet/core/sdk:3.1.201
+FROM mcr.microsoft.com/dotnet/core/sdk:3.1.201-nanoserver-1909
                     
 USER gitpod
 
