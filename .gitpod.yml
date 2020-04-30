@@ -1,6 +1,10 @@
 tasks:
-  - init: echo "Replace me with a build script for the project."
-    command: echo "Replace me with something that should run on every start, or just
-      remove me entirely."
+  - init:  chmod +x run-server-64-bit.sh
+    command: ./run-server-64-bit.sh
 image:
   file: .gitpod.Dockerfile
+
+vscode:
+  extensions:
+    - ms-dotnettools.csharp@1.21.17:5/iI88WHX4j3iL5jASDTYQ==
+    - Ionide.Ionide-fsharp@4.10.0:ngYoEYjC0rbYS9a19YuIIA==
