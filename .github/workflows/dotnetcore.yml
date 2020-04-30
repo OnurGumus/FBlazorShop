@@ -27,4 +27,3 @@ jobs:
     - name: Build
       run: dotnet paketdotnet publish ./FBlazorShop.Web/FBlazorShop.Web.fsproj /p:Configuration=Release /p:Platform=x64 restore
 
-cd ./FBlazorShop.Web/bin/x64/Release/netcoreapp3.1/publish/
