@@ -1,3 +1,5 @@
+![.NET Core](https://github.com/OnurGumus/FBlazorShop/workflows/.NET%20Core/badge.svg)
+
 This is a port of Steve Sanderson's [Pizza Workshop](https://github.com/dotnet-presentations/blazor-workshop) for Blazor
 by using F# and Bolero. It also shows an example on How to do CQRS with Event Sourcing using Akka Cluster Sharding. (See how orders are placed on server side)
 
