@@ -9,7 +9,7 @@ by using F# and Bolero. It also shows an example on How to do CQRS with Event So
 * Live version working with WASM is here: https://fblazorshop.azurewebsites.net/
 
 
-![ScreenShot](FBlazor.png)
+![ScreenShot](FBlazorShop.gif)
 ## Build & Run instructions:
 - Building requires .NET Core 3.1.201 SDK
 - For Linux you also need Mono 6.x while building
