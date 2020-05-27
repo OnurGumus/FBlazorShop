@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Server",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "Build Server",
+            "program": "${workspaceFolder}/FBlazorShop.Web/bin/Debug/netcoreapp3.1/FBlazorShop.Web.dll",
+            "cwd": "${workspaceFolder}/FBlazorShop.Web",
+           // "env": {"Irma_Infill_Grpc_Address":"irma-infill-api:40051", "Ensemble_Service_Address":"ensemble-service:40051"},
+            "args": [],
+            "logging": {
+                "moduleLoad": false
+            },
+            "stopAtEntry": false,
+            "justMyCode":false,
+            "console": "internalConsole",
+        },
+    ]
+}

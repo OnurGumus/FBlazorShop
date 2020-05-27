@@ -306,3 +306,4 @@ Application/SmartKiosk/DeskoLibs)/
 
 .fake
 .ionide
+.ionide/symbolCache.db
