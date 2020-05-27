@@ -10,13 +10,24 @@ open FBlazorShop.EF
 open Bolero.Templating.Server
 open Bolero.Remoting.Server
 open FBlazorShop
-open Microsoft.AspNetCore.Razor.TagHelpers
-open TagHelperComponents
+open Bolero.Server.RazorHost
 
 type Startup() =
+    let serverMode =
+    #if WASM
+        false
+    #else
+        true
+    #endif
+    let debug =
+    #if DEBUG
+        true
+    #else
+        false
+    #endif
     member _.ConfigureServices(services: IServiceCollection) =
         services
-            .AddTransient<ITagHelperComponent,BlazorScriptTagHelperComponent>()
+            .AddBoleroHost(serverMode,true,debug)
         #if DEBUG
            .AddHotReload(templateDir = "../FBlazorShop.Web.BlazorClient")
         #endif

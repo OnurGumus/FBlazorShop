@@ -2,23 +2,23 @@ source https://api.nuget.org/v3/index.json
 storage:none
 framework:auto-detect
 
-nuget FSharp.Core >= 4.7.1
+nuget FSharp.Core 
 nuget System.Collections.Immutable
 nuget Microsoft.EntityFrameworkCore 
 nuget System.Threading.Tasks
 nuget TaskBuilder.fs
 nuget Microsoft.EntityFrameworkCore.Sqlite
 
-nuget Bolero 0.12.12-preview32
-nuget Bolero.Server 0.12.12-preview32
-nuget Bolero.HotReload.Server 0.12.5-preview32
-nuget Bolero.HotReload 0.12.5-preview32
-nuget Bolero.Build 0.12.12-preview32
+nuget Bolero
+nuget Bolero.Server
+nuget Bolero.HotReload.Server 
+nuget Bolero.HotReload
+nuget Bolero.Build
 
-nuget Microsoft.AspNetCore.Components.WebAssembly.Build  3.2.0-preview2.20160.5
-nuget Microsoft.AspNetCore.Components.WebAssembly.DevServer 3.2.0-preview2.20160.5
-nuget Microsoft.AspNetCore.Components.WebAssembly.Server 3.2.0-preview2.20160.5
-nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation 3.1
+nuget Microsoft.AspNetCore.Components.WebAssembly.Build 
+nuget Microsoft.AspNetCore.Components.WebAssembly.DevServer
+nuget Microsoft.AspNetCore.Components.WebAssembly.Server
+nuget Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation 
 nuget Microsoft.AspNetCore.Components 
 
 nuget JWT
@@ -33,8 +33,8 @@ nuget Akkling.Cluster.Sharding
 nuget Akka.Persistence.Query.Sql 
 nuget Akka.Cluster.Tools
 
-nuget SQLProvider 1.1.76
-nuget Microsoft.Data.Sqlite.Core 3.1.3
+nuget SQLProvider
+nuget Microsoft.Data.Sqlite.Core
 nuget SQLitePCLRaw.lib.e_sqlite3.linux
 nuget Serilog.Sinks.ApplicationInsights
 nuget Serilog.Sinks.File

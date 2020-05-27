@@ -35,7 +35,6 @@
     <EmbeddedResource Remove="Shared\**" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TagHelperComponents.fs" />
     <Compile Include="Services.fs" />
     <Compile Include="Startup.fs" />
     <Compile Include="Program.fs" />

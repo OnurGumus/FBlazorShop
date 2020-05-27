@@ -1,7 +1,8 @@
 ﻿@page "/"
 @namespace FBlazorShop.Web
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @using FBlazorShop.Web.BlazorClient
+@using Bolero.Server.RazorHost
+@inject IBoleroHostConfig BoleroHostConfig
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -74,10 +75,8 @@
     @{
     var specials = Seed.specials.ToArray();
     }
-
     <app>
-
-        <component type="typeof(Main.MyApp)" render-mode="ServerPrerendered" param-X="2" />
+        @(await Html.RenderComponentAsync<Main.MyApp>(BoleroHostConfig))
     </app>
     <div id="blazor-error-ui">
         <environment include="Staging,Production">
@@ -89,7 +88,7 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
-
+    @Html.RenderBoleroScript(BoleroHostConfig)
     <scSript src="_content/FBlazorShop.ComponentsLibrary/localStorage.js"></scSript>
     <script src="_content/FBlazorShop.ComponentsLibrary/pushNotifications.js"></script>
     <script src="_content/FBlazorShop.ComponentsLibrary/deliveryMap.js"></script>
