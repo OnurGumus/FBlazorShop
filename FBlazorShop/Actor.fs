@@ -9,7 +9,9 @@ open System.Collections.Immutable
 open System
 
 let configWithPort port =
-    let config = Configuration.parse ("""
+    let config =
+        Configuration.parse
+            ("""
         akka {
             extensions = ["Akka.Cluster.Tools.PublishSubscribe.DistributedPubSubExtensionProvider,Akka.Cluster.Tools"]
             stdout-loglevel = INFO
@@ -38,7 +40,9 @@ let configWithPort port =
                 dot-netty.tcp {
                     public-hostname = "localhost"
                     hostname = "localhost"
-                    port = """ + port.ToString() + """
+                    port = """
+             + port.ToString()
+             + """
                 }
             }
             cluster {
@@ -88,22 +92,26 @@ let configWithPort port =
             }
         }
         """)
+
     config.WithFallback(ClusterSingletonManager.DefaultConfig())
 
 
 let defaultTag = ImmutableHashSet.Create("default")
 
-type Tagger  =
+type Tagger =
     interface IWriteEventAdapter with
         member _.Manifest _ = ""
-        member _.ToJournal evt =
-                box <| Tagged(evt, defaultTag)
-    new () = {}
+        member _.ToJournal evt = box <| Tagged(evt, defaultTag)
 
-let system = System.create "cluster-system" (configWithPort 0)
+    new() = {  }
+
+let system =
+    System.create "cluster-system" (configWithPort 0)
+
 open Akka.Cluster
 
-Cluster.Get(system).SelfAddress |> Cluster.Get(system).Join
+Cluster.Get(system).SelfAddress
+|> Cluster.Get(system).Join
 
 open Akka.Cluster.Tools.PublishSubscribe
 open Akkling.Persistence
@@ -114,6 +122,5 @@ SqlitePersistence.Get(system) |> ignore
 
 let mat = ActorMaterializer.Create(system)
 
-let subscribeForCommand command = Common.CommandHandler.subscribeForCommand system (typed mediator) command
-
-
+let subscribeForCommand command =
+    Common.CommandHandler.subscribeForCommand system (typed mediator) command

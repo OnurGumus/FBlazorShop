@@ -10,7 +10,6 @@ open Projection
 type EFExtensions() =
     [<Extension>]
     static member inline SetupServices(services: IServiceCollection) =
-        services
-            .AddScoped<IOrderService,OrderService>()
-            .AddScoped<OrderService>(fun p -> downcast p.GetService<IOrderService>())
-            .AddScoped<IReadOnlyRepo<OrderEntity>,OrderReadOnlyRepo>()
+        services.AddScoped<IOrderService, OrderService>().AddScoped<OrderService>(fun p ->
+            downcast p.GetService<IOrderService>())
+            .AddScoped<IReadOnlyRepo<OrderEntity>, OrderReadOnlyRepo>()
