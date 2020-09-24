@@ -108,7 +108,7 @@ let update remote message (model : Model, commonState : Common.State) =
     | OrderPlaced order,(_,Common.AuthState.Success auth) ->
         let order  = {order with DeliveryAddress = model.CurrentAddress}
         let cmd =
-            Cmd.ofAsync remote.placeOrder (auth.Token, order)
+            Cmd.OfAsync.either remote.placeOrder (auth.Token, order)
                 (function Ok (id, v) -> OrderAccepted (id,v) | Error e -> invalidOp e) raise
         { model with OrderPlaced = true} , cmd, Cmd.none
     | _, (_, Common.AuthState.NotTried)

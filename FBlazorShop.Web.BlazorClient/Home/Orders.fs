@@ -33,7 +33,7 @@ let getPizzas (jsRuntime : IJSRuntime)  =
                 | null -> PizzasLoaded []
                 | t -> t |> JsonConvert.DeserializeObject<Pizza list> |> PizzasLoaded
         }
-    Cmd.ofAsync doWork () id (fun _ -> PizzasLoaded [])
+    Cmd.OfAsync.either doWork () id (fun _ -> PizzasLoaded [])
 
 let updatePizzaList (jsRuntime : IJSRuntime)  pizzas =
     let doWork () =
@@ -45,7 +45,7 @@ let updatePizzaList (jsRuntime : IJSRuntime)  pizzas =
                     |> Async.AwaitTask
             return StorageUpdated
         }
-    Cmd.ofAsync doWork () id raise
+    Cmd.OfAsync.either doWork () id raise
 let init jsRuntime =
     { Order = None; }, Cmd.none
 

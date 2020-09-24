@@ -28,7 +28,7 @@ let init (remote: PizzaService)  specials jsRuntime =
     let pizzaConfigCmd = Cmd.map PizzaConfigMsg pizzaConfigCmd
     let cmd =
         match specials with
-        | [] ->Cmd.ofAsync remote.getSpecials () SpecialsReceived raise
+        | [] ->Cmd.OfAsync.either remote.getSpecials () SpecialsReceived raise
         | _ -> Cmd.none
     let cmd = Cmd.batch [ cmd; pizzaConfigCmd; Cmd.map OrderMsg orderCmd  ]
     { specials = specials

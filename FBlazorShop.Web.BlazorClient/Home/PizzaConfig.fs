@@ -20,7 +20,7 @@ type PizzaConfigMsg =
     | ConfigDone of Pizza
 
 let init (remote : PizzaService ) () =
-    let cmd = Cmd.ofAsync remote.getToppings () ToppingsReceived raise
+    let cmd = Cmd.OfAsync.either remote.getToppings () ToppingsReceived raise
     { Pizza = None; Toppings = [] }, cmd
 
 let update ( state : Model) (msg : PizzaConfigMsg) : Model * Cmd<_> =

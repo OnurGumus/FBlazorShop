@@ -34,7 +34,7 @@ let loadPeriodically remote token  id version firstTime =
             return! getOrder 100
 
         }
-    Cmd.ofAsync doWork id (fun m -> OrderLoaded(id ,version,m, false)) (fun _ -> OrderLoaded("",0,None, true))
+    Cmd.OfAsync.either doWork id (fun m -> OrderLoaded(id ,version,m, false)) (fun _ -> OrderLoaded("",0,None, true))
 
 let init (id, version) ={ Order = None; Key = ""; Version = 0}, Cmd.ofMsg (OrderLoaded (id, version,None, true))
 

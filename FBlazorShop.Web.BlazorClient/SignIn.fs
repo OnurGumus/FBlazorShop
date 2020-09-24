@@ -51,7 +51,7 @@ let signInCmd (remote : PizzaService) (email,pass) =
         async{
             return! remote.signIn (email,pass)
     }
-    Cmd.ofAsync doWork (email,pass)
+    Cmd.OfAsync.either doWork (email,pass)
         (function | Ok m -> SignInSuccessful(m) | Error s -> SignInFailed s)
         (fun m -> SignInFailed(m.ToString()))
 

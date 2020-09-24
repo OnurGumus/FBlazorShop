@@ -20,7 +20,7 @@ let init (remote : PizzaService)  =
 let update (remote :PizzaService) message (model , commonState: Common.State) =
     match message, commonState.Authentication with
     | Reload , Common.AuthState.Success auth
-    | Initialized , Common.AuthState.Success auth-> model, Cmd.ofAsync remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
+    | Initialized , Common.AuthState.Success auth-> model, Cmd.OfAsync.either remote.getOrderWithStatuses auth.Token OrdersLoaded raise, Cmd.none
     | OrdersLoaded orders , _ -> { MyOrders = Some orders }, Cmd.none, Cmd.none
     | _ , Common.AuthState.NotTried -> model, Cmd.none, Cmd.none
     | _ -> failwith ""
