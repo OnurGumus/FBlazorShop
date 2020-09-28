@@ -1,6 +1,6 @@
 tasks:
-  - init:  chmod +x run-server-64-bit.sh
-    command: ./run-server-64-bit.sh
+  #- init:  chmod +x run-server-64-bit.cmd
+    command: ./run-server-64-bit.cmd
 image:
   file: .gitpod.Dockerfile
 
