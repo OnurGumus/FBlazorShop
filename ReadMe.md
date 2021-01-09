@@ -12,6 +12,6 @@ by using F# and Bolero. It also shows an example on How to do CQRS with Event So
 - For Linux and macOS you also need Mono 6.x while building.
 - Clone the repository (if you choose to download zip, you may need to unblock .config/dotnet-tools.json on windows platform)
 - Windows users can just run **run-server-64-bit.cmd** or **run-wasm-64-bit.cmd** depending on which version they want to run.
-- Linux users should run **un-server-64-bit.sh** or **run-wasm-64-bit.sh**
+- Linux and macOS users should execute **run-server-64-bit.sh** or **run-wasm-64-bit.sh**.
 - Then open your browser and browse **http://localhost:5000**.
 - Visual studio or VS Code users should first execute one of the run commands above then they can just open the solution and start the FBlazorShop.Web project (better set it as StartUp project). By default the application runs on Server-side mode. If you want Web Assembly, just add WASM compilation constant to the FBlazorShop.Web project and rebuild.
